@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "./themes.css";
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
