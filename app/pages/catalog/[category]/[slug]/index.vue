@@ -23,9 +23,22 @@ const { data: product } = await useAsyncData(`product-${slug.value}`, () =>
     productApi.getBySlug(slug.value)
 )
 
+const siteUrl = useRuntimeConfig().public.siteUrl
+
 useSeoMeta({
-  title: () => product.value?.seoTitle || `${product.value?.title} — ART MONOLIT`,
+  title: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
   description: () => product.value?.seoDescription || product.value?.description || '',
+  ogType: 'product',
+  ogTitle: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
+  ogDescription: () => product.value?.seoDescription || product.value?.description || '',
+  ogImage: () => product.value?.images?.[0] || `${siteUrl}/og-image.jpg`,
+  ogUrl: () => `${siteUrl}/catalog/${slug.value}`,
+  ogLocale: 'uk_UA',
+  ogSiteName: 'Арт Моноліт',
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
+  twitterDescription: () => product.value?.seoDescription || product.value?.description || '',
+  twitterImage: () => product.value?.images?.[0] || `${siteUrl}/og-image.jpg`,
 })
 
 const quickFacts = [
