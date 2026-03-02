@@ -112,10 +112,18 @@ const showDeleteConfirm = ref(false)
 const newTargetGroupName = ref('')
 const isAddingTargetGroup = ref(false)
 const targetGroupSaving = ref(false)
+const editingTargetGroupId = ref<string | null>(null)
+const editingTargetGroupName = ref('')
+const targetGroupUpdating = ref(false)
+const targetGroupDeleting = ref<string | null>(null)
 
 const newMaterialName = ref('')
 const isAddingMaterial = ref(false)
 const materialSaving = ref(false)
+const editingMaterialId = ref<string | null>(null)
+const editingMaterialName = ref('')
+const materialUpdating = ref(false)
+const materialDeleting = ref<string | null>(null)
 
 const slugManuallyEdited = ref(!!props.initialData.slug)
 const seoTitleManuallyEdited = ref(!!props.initialData.seoTitle)
@@ -189,6 +197,40 @@ async function addTargetGroup() {
   }
 }
 
+function startEditTargetGroup(id: string, name: string) {
+  editingTargetGroupId.value = id
+  editingTargetGroupName.value = name
+}
+
+function cancelEditTargetGroup() {
+  editingTargetGroupId.value = null
+  editingTargetGroupName.value = ''
+}
+
+async function saveEditTargetGroup() {
+  const id = editingTargetGroupId.value
+  const name = editingTargetGroupName.value.trim()
+  if (!id || !name) return
+  targetGroupUpdating.value = true
+  try {
+    await targetGroupStore.update(id, name, toSlug(name))
+    editingTargetGroupId.value = null
+    editingTargetGroupName.value = ''
+  } finally {
+    targetGroupUpdating.value = false
+  }
+}
+
+async function deleteTargetGroup(id: string) {
+  targetGroupDeleting.value = id
+  try {
+    await targetGroupStore.remove(id)
+    form.targetGroupIds = form.targetGroupIds.filter(gId => gId !== id)
+  } finally {
+    targetGroupDeleting.value = null
+  }
+}
+
 async function addMaterial() {
   const name = newMaterialName.value.trim()
   if (!name) return
@@ -200,6 +242,40 @@ async function addMaterial() {
     isAddingMaterial.value = false
   } finally {
     materialSaving.value = false
+  }
+}
+
+function startEditMaterial(id: string, name: string) {
+  editingMaterialId.value = id
+  editingMaterialName.value = name
+}
+
+function cancelEditMaterial() {
+  editingMaterialId.value = null
+  editingMaterialName.value = ''
+}
+
+async function saveEditMaterial() {
+  const id = editingMaterialId.value
+  const name = editingMaterialName.value.trim()
+  if (!id || !name) return
+  materialUpdating.value = true
+  try {
+    await materialStore.update(id, name, toSlug(name))
+    editingMaterialId.value = null
+    editingMaterialName.value = ''
+  } finally {
+    materialUpdating.value = false
+  }
+}
+
+async function deleteMaterial(id: string) {
+  materialDeleting.value = id
+  try {
+    await materialStore.remove(id)
+    form.materialIds = form.materialIds.filter(mId => mId !== id)
+  } finally {
+    materialDeleting.value = null
   }
 }
 
@@ -354,18 +430,68 @@ defineExpose({ isSaving })
         <div class="admin-card">
           <h3 class="admin-card__title">Матерiал</h3>
           <div v-if="materialOptions.length" class="admin-checkboxes">
-            <label
+            <div
                 v-for="material in materialOptions"
                 :key="material.value"
-                class="admin-checkbox"
+                class="admin-editable-row"
             >
-              <input
-                  type="checkbox"
-                  :checked="form.materialIds.includes(material.value)"
-                  @change="toggleMaterial(material.value)"
-              >
-              <span>{{ material.label }}</span>
-            </label>
+              <template v-if="editingMaterialId === material.value">
+                <div class="admin-editable-row__edit">
+                  <BInput
+                      v-model="editingMaterialName"
+                      size="sm"
+                      @keydown.enter.prevent="saveEditMaterial"
+                      @keydown.escape="cancelEditMaterial"
+                  />
+                  <div class="admin-editable-row__actions">
+                    <button
+                        type="button"
+                        class="admin-editable-row__btn admin-editable-row__btn--save"
+                        :disabled="materialUpdating"
+                        @click="saveEditMaterial"
+                    >
+                      <BIcon name="check" size="sm" />
+                    </button>
+                    <button
+                        type="button"
+                        class="admin-editable-row__btn"
+                        @click="cancelEditMaterial"
+                    >
+                      <BIcon name="close" size="sm" />
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <label class="admin-checkbox">
+                  <input
+                      type="checkbox"
+                      :checked="form.materialIds.includes(material.value)"
+                      @change="toggleMaterial(material.value)"
+                  >
+                  <span>{{ material.label }}</span>
+                </label>
+                <div class="admin-editable-row__actions">
+                  <button
+                      type="button"
+                      class="admin-editable-row__btn"
+                      title="Редагувати"
+                      @click="startEditMaterial(material.value, material.label)"
+                  >
+                    <BIcon name="edit" size="sm" />
+                  </button>
+                  <button
+                      type="button"
+                      class="admin-editable-row__btn admin-editable-row__btn--danger"
+                      title="Видалити"
+                      :disabled="materialDeleting === material.value"
+                      @click="deleteMaterial(material.value)"
+                  >
+                    <BIcon name="trash" size="sm" />
+                  </button>
+                </div>
+              </template>
+            </div>
           </div>
           <div v-else class="admin-empty">Матерiали ще не додані</div>
 
@@ -398,18 +524,68 @@ defineExpose({ isSaving })
         <div class="admin-card">
           <h3 class="admin-card__title">Цiльова група</h3>
           <div v-if="targetGroupOptions.length" class="admin-checkboxes">
-            <label
+            <div
                 v-for="group in targetGroupOptions"
                 :key="group.value"
-                class="admin-checkbox"
+                class="admin-editable-row"
             >
-              <input
-                  type="checkbox"
-                  :checked="form.targetGroupIds.includes(group.value)"
-                  @change="toggleTargetGroup(group.value)"
-              >
-              <span>{{ group.label }}</span>
-            </label>
+              <template v-if="editingTargetGroupId === group.value">
+                <div class="admin-editable-row__edit">
+                  <BInput
+                      v-model="editingTargetGroupName"
+                      size="sm"
+                      @keydown.enter.prevent="saveEditTargetGroup"
+                      @keydown.escape="cancelEditTargetGroup"
+                  />
+                  <div class="admin-editable-row__actions">
+                    <button
+                        type="button"
+                        class="admin-editable-row__btn admin-editable-row__btn--save"
+                        :disabled="targetGroupUpdating"
+                        @click="saveEditTargetGroup"
+                    >
+                      <BIcon name="check" size="sm" />
+                    </button>
+                    <button
+                        type="button"
+                        class="admin-editable-row__btn"
+                        @click="cancelEditTargetGroup"
+                    >
+                      <BIcon name="close" size="sm" />
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <label class="admin-checkbox">
+                  <input
+                      type="checkbox"
+                      :checked="form.targetGroupIds.includes(group.value)"
+                      @change="toggleTargetGroup(group.value)"
+                  >
+                  <span>{{ group.label }}</span>
+                </label>
+                <div class="admin-editable-row__actions">
+                  <button
+                      type="button"
+                      class="admin-editable-row__btn"
+                      title="Редагувати"
+                      @click="startEditTargetGroup(group.value, group.label)"
+                  >
+                    <BIcon name="edit" size="sm" />
+                  </button>
+                  <button
+                      type="button"
+                      class="admin-editable-row__btn admin-editable-row__btn--danger"
+                      title="Видалити"
+                      :disabled="targetGroupDeleting === group.value"
+                      @click="deleteTargetGroup(group.value)"
+                  >
+                    <BIcon name="trash" size="sm" />
+                  </button>
+                </div>
+              </template>
+            </div>
           </div>
           <div v-else class="admin-empty">Цiльовi групи ще не додані</div>
 
@@ -626,6 +802,62 @@ defineExpose({ isSaving })
   height: 16px;
   accent-color: var(--gold);
   cursor: pointer;
+}
+
+.admin-editable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-editable-row__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-editable-row__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.admin-editable-row__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.admin-editable-row__btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-secondary);
+}
+
+.admin-editable-row__btn--save:hover {
+  color: var(--success, #22c55e);
+  border-color: var(--success, #22c55e);
+}
+
+.admin-editable-row__btn--danger:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.admin-editable-row__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .admin-specs {

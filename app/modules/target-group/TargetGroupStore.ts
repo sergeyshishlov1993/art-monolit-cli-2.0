@@ -17,5 +17,19 @@ export const useTargetGroupStore = defineStore('targetGroup', () => {
         return created
     }
 
-    return { targetGroups, fetchAll, create }
+    async function update(id: string, name: string, slug: string) {
+        const updated = await api.update(id, { name, slug })
+        const index = targetGroups.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            targetGroups.value[index] = updated
+        }
+        return updated
+    }
+
+    async function remove(id: string) {
+        await api.remove(id)
+        targetGroups.value = targetGroups.value.filter(g => g.id !== id)
+    }
+
+    return { targetGroups, fetchAll, create, update, remove }
 })
