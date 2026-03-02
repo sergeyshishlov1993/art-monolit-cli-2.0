@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHeroStore } from '~/modules/hero/stores/useHeroStore'
+import { useHeroStore } from '~/modules/hero/HeroStore'
 
 const heroStore = useHeroStore()
 
