@@ -21,6 +21,9 @@ export default defineNuxtConfig({
     },
     app: {
         head: {
+            link: [
+                { rel: 'icon', type: 'image/x-icon', href: '/favicon.png' },
+            ],
             script: [
                 {
                     innerHTML: `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}document.documentElement.className='theme-'+t})()`,
