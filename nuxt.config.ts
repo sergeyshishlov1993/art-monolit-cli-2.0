@@ -43,7 +43,7 @@ export default defineNuxtConfig({
                 { name: 'twitter:image', content: '/og-image.jpg' },
             ],
             link: [
-                { rel: 'icon', type: 'image/x-icon', href: '/favicon.png' },
+                { rel: 'icon', type: 'image/png', href: '/favicon.png' },
             ],
             script: [
                 {
