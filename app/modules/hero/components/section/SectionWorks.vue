@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { usePortfolioApi } from '~/modules/portfolio/PortfolioApi'
-import type { PortfolioWork } from '~/modules/portfolio/types'
+import type { PortfolioWork, PortfolioListResponse } from '~/modules/portfolio/types'
 
 const portfolioApi = usePortfolioApi()
 
-const { data: works, status } = await useAsyncData<PortfolioWork[]>(
+const { data: works, status } = await useAsyncData(
     'home-works',
-    () => portfolioApi.getAll(),
+    () => portfolioApi.getAll({ page: 1, limit: 6 }),
     {
-      default: () => [],
-      transform: (data) => data.slice(0, 6),
+      default: () => ({ items: [], total: 0, page: 1, limit: 6, totalPages: 0, hasMore: false } as PortfolioListResponse),
     }
 )
+
+const worksList = computed<PortfolioWork[]>(() => works.value.items)
 
 function openWork(workId: string) {
   navigateTo({
@@ -20,7 +21,7 @@ function openWork(workId: string) {
   })
 }
 
-function getWorkImage(work: PortfolioWork) {
+function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | null {
   return work.images[0] || null
 }
 </script>
@@ -39,9 +40,9 @@ function getWorkImage(work: PortfolioWork) {
         Завантаження...
       </div>
 
-      <div v-else-if="works.length > 0" class="works__grid">
+      <div v-else-if="worksList.length > 0" class="works__grid">
         <button
-            v-for="work in works"
+            v-for="work in worksList"
             :key="work.id"
             type="button"
             class="works__item"
