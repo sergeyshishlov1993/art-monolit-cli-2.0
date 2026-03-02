@@ -58,15 +58,15 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       <span v-if="props.required" class="b-select__required">*</span>
     </label>
     <button
-      type="button"
-      class="b-select__trigger"
-      :class="[
+        type="button"
+        class="b-select__trigger"
+        :class="[
         props.error ? 'b-select__trigger--error' : '',
         props.disabled ? 'b-select__trigger--disabled' : '',
         isOpen ? 'b-select__trigger--open' : '',
       ]"
-      :disabled="props.disabled"
-      @click="toggle"
+        :disabled="props.disabled"
+        @click="toggle"
     >
       <span :class="selectedLabel ? '' : 'b-select__placeholder'">
         {{ selectedLabel || props.placeholder || 'Выберите...' }}
@@ -79,12 +79,12 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     <Transition name="dropdown">
       <div v-if="isOpen" class="b-select__dropdown">
         <button
-          v-for="opt in props.options"
-          :key="opt.value"
-          type="button"
-          class="b-select__option"
-          :class="opt.value === props.modelValue ? 'b-select__option--active' : ''"
-          @click="select(opt.value)"
+            v-for="opt in props.options"
+            :key="opt.value"
+            type="button"
+            class="b-select__option"
+            :class="opt.value === props.modelValue ? 'b-select__option--active' : ''"
+            @click="select(opt.value)"
         >
           {{ opt.label }}
         </button>
@@ -157,15 +157,16 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .b-select__dropdown {
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
   z-index: 100;
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: 2px;
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .b-select__option {
@@ -204,6 +205,6 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(-4px);
 }
 </style>
