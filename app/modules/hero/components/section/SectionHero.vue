@@ -1,38 +1,33 @@
 <script setup lang="ts">
-import { useHeroApi } from '~/modules/hero/HeroApi'
-import type { HeroSlide } from '~/modules/hero/types'
+import { useHeroStore } from '~/modules/hero/stores/useHeroStore'
 
-const heroApi = useHeroApi()
+const heroStore = useHeroStore()
 
-const { data: slides, status } = await useAsyncData<HeroSlide[]>(
-    'hero-slides',
-    () => heroApi.getAll(),
-    { default: () => [] }
-)
+await heroStore.fetchAll()
 
-const currentIndex = ref(0)
+const currentIndex = ref<number>(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const currentSlide = computed(() => slides.value[currentIndex.value])
+const currentSlide = computed(() => heroStore.slides[currentIndex.value])
 
-function next() {
-  if (slides.value.length === 0) return
-  currentIndex.value = (currentIndex.value + 1) % slides.value.length
+function next(): void {
+  if (heroStore.slides.length === 0) return
+  currentIndex.value = (currentIndex.value + 1) % heroStore.slides.length
 }
 
-function goTo(index: number) {
+function goTo(index: number): void {
   currentIndex.value = index
   restartTimer()
 }
 
-function restartTimer() {
+function restartTimer(): void {
   if (timer) clearInterval(timer)
-  if (slides.value.length > 1) {
+  if (heroStore.slides.length > 1) {
     timer = setInterval(next, 6000)
   }
 }
 
-function handleButtonClick() {
+function handleButtonClick(): void {
   if (currentSlide.value?.buttonLink) {
     navigateTo(currentSlide.value.buttonLink)
   }
@@ -46,8 +41,8 @@ onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-watch(slides, () => {
-  if (currentIndex.value >= slides.value.length) {
+watch(() => heroStore.slides, () => {
+  if (currentIndex.value >= heroStore.slides.length) {
     currentIndex.value = 0
   }
   restartTimer()
@@ -56,14 +51,14 @@ watch(slides, () => {
 
 <template>
   <section class="hero">
-    <div v-if="status === 'pending'" class="hero__loading">
+    <div v-if="heroStore.loading && !heroStore.loaded" class="hero__loading">
       Завантаження...
     </div>
 
-    <template v-else-if="slides.length > 0 && currentSlide">
+    <template v-else-if="heroStore.slides.length > 0 && currentSlide">
       <div class="hero__slides">
         <div
-            v-for="(slide, index) in slides"
+            v-for="(slide, index) in heroStore.slides"
             :key="slide.id"
             class="hero__slide"
             :class="{ 'hero__slide--active': currentIndex === index }"
@@ -107,9 +102,9 @@ watch(slides, () => {
           </BButton>
         </div>
 
-        <div v-if="slides.length > 1" class="hero__dots">
+        <div v-if="heroStore.slides.length > 1" class="hero__dots">
           <button
-              v-for="(_, index) in slides"
+              v-for="(_, index) in heroStore.slides"
               :key="index"
               class="hero__dot"
               :class="{ 'hero__dot--active': currentIndex === index }"

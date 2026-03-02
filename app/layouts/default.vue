@@ -2,13 +2,17 @@
 import { ROUTES } from "~/modules/common/constants/routes"
 
 const navItems = [
-  { label: 'Каталог', to: ROUTES.CATALOG, children: [
+  {
+    label: 'Каталог',
+    to: ROUTES.CATALOG,
+    children: [
       { label: 'Одинарні', to: ROUTES.CATALOG_CATEGORY('single') },
       { label: 'Подвійні', to: ROUTES.CATALOG_CATEGORY('double') },
       { label: 'Комплекси', to: ROUTES.CATALOG_CATEGORY('complex') },
       { label: 'Огорожі', to: ROUTES.CATALOG_CATEGORY('borders') },
       { label: 'Плитка та вази', to: ROUTES.CATALOG_CATEGORY('tiles') },
-    ]},
+    ],
+  },
   { label: 'Портфоліо', to: ROUTES.PORTFOLIO },
   { label: 'Доставка', to: ROUTES.DELIVERY },
   { label: 'Про нас', to: ROUTES.ABOUT },
@@ -49,6 +53,10 @@ const route = useRoute()
   <div class="app-layout">
     <TheHeader :nav="navItems">
       <template #actions>
+        <BThemeToggle />
+      </template>
+
+      <template #actionsMobile>
         <BThemeToggle />
       </template>
     </TheHeader>
