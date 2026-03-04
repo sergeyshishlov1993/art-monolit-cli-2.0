@@ -25,7 +25,11 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
 
     async function fetchCounts(params: { categoryId?: string } = {}) {
-        counts.value = await api.getCounts(params)
+        try {
+            counts.value = await api.getCounts(params)
+        } catch {
+            counts.value = null
+        }
     }
 
     async function fetchById(id: string) {

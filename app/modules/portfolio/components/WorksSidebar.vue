@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
 import { useApi } from '~/modules/common/composables/useApi'
 import { usePortfolioStore } from '~/modules/portfolio/PortfolioStore'
 import type { CatalogCategory, CatalogMaterial, CatalogTargetGroup } from '~/modules/portfolio/types'
@@ -22,20 +21,23 @@ const emit = defineEmits<{
 const { $api } = useApi()
 const portfolioStore = usePortfolioStore()
 
-const { data: categories } = await useAsyncData('catalog-categories', () =>
-    $api<CatalogCategory[]>('/categories')
-)
+const [
+  { data: categories },
+  { data: materials },
+  { data: targetGroups },
+] = await Promise.all([
+  useAsyncData('catalog-categories', () => $api<CatalogCategory[]>('/categories')),
+  useAsyncData('catalog-materials', () => $api<CatalogMaterial[]>('/materials')),
+  useAsyncData('catalog-target-groups', () => $api<CatalogTargetGroup[]>('/target-groups')),
+])
 
-const { data: materials } = await useAsyncData('catalog-materials', () =>
-    $api<CatalogMaterial[]>('/materials')
-)
-
-const { data: targetGroups } = await useAsyncData('catalog-target-groups', () =>
-    $api<CatalogTargetGroup[]>('/target-groups')
-)
-
-onMounted(() => {
-  portfolioStore.fetchCounts()
+await useAsyncData('portfolio-counts', async () => {
+  try {
+    portfolioStore.counts = await $api('/portfolio/counts')
+  } catch {
+    portfolioStore.counts = null
+  }
+  return null
 })
 
 function getCategoryCount(slug: string): number {
