@@ -1,6 +1,8 @@
 export function useApi() {
     const config = useRuntimeConfig()
-    const baseURL = config.public.apiBase as string
+    const baseURL = import.meta.server
+        ? 'http://127.0.0.1:4000/api'
+        : (config.public.apiBase as string)
 
     let isRefreshing = false
     let refreshPromise: Promise<void> | null = null
