@@ -115,8 +115,25 @@ function getMainImage(work: PortfolioWork): string {
 const overlayOpen = ref(false)
 const currentIndex = ref(0)
 const direction = ref<'next' | 'prev'>('next')
+const thumbnailsRef = ref<HTMLElement | null>(null)
+const endReachedMessage = ref(false)
 
 const currentWork = computed(() => works.value[currentIndex.value])
+
+function scrollThumbnailIntoView(index: number) {
+  if (!thumbnailsRef.value) return
+  const thumbnail = thumbnailsRef.value.children[index] as HTMLElement | undefined
+  if (!thumbnail) return
+  thumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+}
+
+watch(currentIndex, (index) => {
+  nextTick(() => scrollThumbnailIntoView(index))
+
+  if (hasMore.value && !isFetching.value && index >= works.value.length - 2) {
+    fetchWorks()
+  }
+})
 
 function openOverlay(index: number) {
   currentIndex.value = index
@@ -124,6 +141,7 @@ function openOverlay(index: number) {
   if (import.meta.client) {
     document.body.style.overflow = 'hidden'
   }
+  nextTick(() => scrollThumbnailIntoView(index))
 }
 
 function openOverlayById(workId: string) {
@@ -140,6 +158,11 @@ function closeOverlay() {
   }
 }
 
+function goToSlide(index: number) {
+  direction.value = index > currentIndex.value ? 'next' : 'prev'
+  currentIndex.value = index
+}
+
 function prevSlide() {
   direction.value = 'prev'
   currentIndex.value = currentIndex.value === 0
@@ -149,6 +172,18 @@ function prevSlide() {
 
 function nextSlide() {
   direction.value = 'next'
+
+  if (currentIndex.value === works.value.length - 1) {
+    if (!hasMore.value) {
+      endReachedMessage.value = true
+      setTimeout(() => {
+        endReachedMessage.value = false
+        currentIndex.value = 0
+      }, 1500)
+      return
+    }
+  }
+
   currentIndex.value = currentIndex.value === works.value.length - 1
       ? 0
       : currentIndex.value + 1
@@ -289,6 +324,31 @@ function closeInquiry() {
                     class="works-overlay__image"
                 >
               </Transition>
+            </div>
+
+            <Transition name="fade">
+              <div v-if="endReachedMessage" class="works-overlay__end-message">
+                Це всі роботи. Повертаємось на початок...
+              </div>
+            </Transition>
+
+            <div class="works-overlay__thumbnails-wrap">
+              <div ref="thumbnailsRef" class="works-overlay__thumbnails">
+                <button
+                    v-for="(work, index) in works"
+                    :key="work.id"
+                    class="works-overlay__thumb"
+                    :class="{ 'works-overlay__thumb--active': index === currentIndex }"
+                    @click="goToSlide(index)"
+                >
+                  <img
+                      v-if="getMainImage(work)"
+                      :src="getMainImage(work)"
+                      :alt="work.title"
+                  >
+                  <div v-else class="works-overlay__thumb-empty" />
+                </button>
+              </div>
             </div>
 
             <div class="works-overlay__bottom">
@@ -473,10 +533,11 @@ function closeInquiry() {
 }
 
 .works-overlay__center {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   max-width: 700px;
   width: 100%;
   padding: 0 80px;
@@ -484,7 +545,7 @@ function closeInquiry() {
 
 .works-overlay__image-wrap {
   width: 100%;
-  height: 60vh;
+  height: 50vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -498,11 +559,87 @@ function closeInquiry() {
   border-radius: 8px;
 }
 
+.works-overlay__end-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgb(0 0 0 / 0.85);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #fff;
+  text-align: center;
+  z-index: 10;
+}
+
+.works-overlay__thumbnails-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.works-overlay__thumbnails {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+}
+
+.works-overlay__thumbnails::-webkit-scrollbar {
+  height: 4px;
+}
+
+.works-overlay__thumbnails::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.works-overlay__thumbnails::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.2);
+  border-radius: 2px;
+}
+
+.works-overlay__thumb {
+  all: unset;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 48px;
+  height: 64px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  opacity: 0.5;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.works-overlay__thumb:hover {
+  opacity: 0.8;
+}
+
+.works-overlay__thumb--active {
+  opacity: 1;
+  border-color: var(--gold);
+}
+
+.works-overlay__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.works-overlay__thumb-empty {
+  width: 100%;
+  height: 100%;
+  background: rgb(255 255 255 / 0.1);
+}
+
 .works-overlay__bottom {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .works-overlay__meta {
@@ -611,6 +748,16 @@ function closeInquiry() {
   opacity: 0;
 }
 
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 1024px) {
   .works-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -627,7 +774,7 @@ function closeInquiry() {
   }
 
   .works-overlay__image-wrap {
-    height: 50vh;
+    height: 40vh;
   }
 
   .works-overlay__arrow {
@@ -648,6 +795,11 @@ function closeInquiry() {
     text-align: center;
     gap: 12px;
     padding: 16px;
+  }
+
+  .works-overlay__thumb {
+    width: 40px;
+    height: 52px;
   }
 }
 </style>
