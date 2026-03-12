@@ -113,6 +113,7 @@ function getMainImage(work: PortfolioWork): string {
 }
 
 const overlayOpen = ref(false)
+const fullscreenOpen = ref(false)
 const currentIndex = ref(0)
 const direction = ref<'next' | 'prev'>('next')
 const thumbnailsRef = ref<HTMLElement | null>(null)
@@ -153,9 +154,18 @@ function openOverlayById(workId: string) {
 
 function closeOverlay() {
   overlayOpen.value = false
+  fullscreenOpen.value = false
   if (import.meta.client) {
     document.body.style.overflow = ''
   }
+}
+
+function openFullscreen() {
+  fullscreenOpen.value = true
+}
+
+function closeFullscreen() {
+  fullscreenOpen.value = false
 }
 
 function goToSlide(index: number) {
@@ -206,7 +216,13 @@ function handleTouchEnd(event: TouchEvent) {
 
 function handleKeydown(event: KeyboardEvent) {
   if (!overlayOpen.value) return
-  if (event.key === 'Escape') closeOverlay()
+  if (event.key === 'Escape') {
+    if (fullscreenOpen.value) {
+      closeFullscreen()
+    } else {
+      closeOverlay()
+    }
+  }
   if (event.key === 'ArrowLeft') prevSlide()
   if (event.key === 'ArrowRight') nextSlide()
 }
@@ -315,7 +331,7 @@ function closeInquiry() {
           <button class="works-overlay__arrow works-overlay__arrow--left" @click="prevSlide">‹</button>
 
           <div class="works-overlay__center">
-            <div class="works-overlay__image-wrap">
+            <div class="works-overlay__image-wrap" @click="openFullscreen">
               <Transition :name="direction === 'next' ? 'slide-next' : 'slide-prev'" mode="out-in">
                 <img
                     :key="currentWork.id"
@@ -369,6 +385,22 @@ function closeInquiry() {
           </div>
 
           <button class="works-overlay__arrow works-overlay__arrow--right" @click="nextSlide">›</button>
+        </div>
+      </Transition>
+
+      <Transition name="fade">
+        <div
+            v-if="fullscreenOpen && currentWork"
+            class="works-fullscreen"
+            @click="closeFullscreen"
+        >
+          <button class="works-fullscreen__close" @click.stop="closeFullscreen">✕</button>
+          <img
+              :src="getMainImage(currentWork)"
+              :alt="currentWork.title"
+              class="works-fullscreen__image"
+              @click.stop
+          >
         </div>
       </Transition>
     </Teleport>
@@ -538,18 +570,21 @@ function closeInquiry() {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  max-width: 700px;
+  max-width: 900px;
   width: 100%;
-  padding: 0 80px;
+  height: 100%;
+  padding: 60px 100px 24px;
+  box-sizing: border-box;
 }
 
 .works-overlay__image-wrap {
+  flex: 1;
   width: 100%;
-  height: 50vh;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  cursor: zoom-in;
 }
 
 .works-overlay__image {
@@ -577,6 +612,7 @@ function closeInquiry() {
 .works-overlay__thumbnails-wrap {
   width: 100%;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .works-overlay__thumbnails {
@@ -640,6 +676,7 @@ function closeInquiry() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .works-overlay__meta {
@@ -679,6 +716,41 @@ function closeInquiry() {
   font-size: 12px;
   color: rgb(255 255 255 / 0.4);
   letter-spacing: 0.02em;
+}
+
+.works-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgb(0 0 0 / 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+
+.works-fullscreen__close {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 1101;
+  font-size: 32px;
+  color: #fff;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  line-height: 1;
+}
+
+.works-fullscreen__close:hover {
+  opacity: 1;
+}
+
+.works-fullscreen__image {
+  max-height: 95vh;
+  max-width: 95vw;
+  object-fit: contain;
 }
 
 .works-inquiry__ref {
@@ -770,11 +842,7 @@ function closeInquiry() {
   }
 
   .works-overlay__center {
-    padding: 0 48px;
-  }
-
-  .works-overlay__image-wrap {
-    height: 40vh;
+    padding: 60px 12px 16px;
   }
 
   .works-overlay__arrow {

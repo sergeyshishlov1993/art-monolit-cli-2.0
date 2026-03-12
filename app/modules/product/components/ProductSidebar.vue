@@ -105,6 +105,25 @@ function applyFilters() {
       <BIcon :name="isMobileOpen ? 'chevron-up' : 'chevron-down'" size="sm" />
     </button>
 
+    <div v-if="visibleCategories.length" class="sidebar__tabs">
+      <button
+          class="sidebar__tab"
+          :class="{ 'sidebar__tab--active': !categorySlug }"
+          @click="selectCategory('')"
+      >
+        Усі
+      </button>
+      <button
+          v-for="cat in visibleCategories"
+          :key="cat.id"
+          class="sidebar__tab"
+          :class="{ 'sidebar__tab--active': categorySlug === cat.slug }"
+          @click="selectCategory(cat.slug)"
+      >
+        {{ cat.name }}
+      </button>
+    </div>
+
     <div class="sidebar__body" :class="{ 'sidebar__body--open': isMobileOpen }">
       <div class="sidebar__section">
         <span class="sidebar__label">Пошук</span>
@@ -234,6 +253,44 @@ function applyFilters() {
   color: var(--bg-primary);
 }
 
+.sidebar__tabs {
+  display: none;
+  gap: 8px;
+  padding: 12px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar__tab {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sidebar__tab:hover {
+  border-color: var(--gold);
+  color: var(--text-primary);
+}
+
+.sidebar__tab--active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg-primary);
+  font-weight: 500;
+}
+
 .sidebar__body {
   display: flex;
   flex-direction: column;
@@ -349,6 +406,7 @@ function applyFilters() {
     margin: 0 -24px;
     padding: 0 24px;
     background: var(--bg-primary);
+    overflow: hidden;
   }
 
   .sidebar__mobile-toggle {
@@ -358,6 +416,14 @@ function applyFilters() {
     border-radius: 0;
     background: var(--bg-primary);
     padding: 14px 0;
+  }
+
+  .sidebar__tabs {
+    display: flex;
+    margin: 0 -24px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    max-width: 100vw;
   }
 
   .sidebar__body {
