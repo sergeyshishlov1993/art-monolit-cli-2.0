@@ -393,14 +393,26 @@ function closeInquiry() {
             v-if="fullscreenOpen && currentWork"
             class="works-fullscreen"
             @click="closeFullscreen"
+            @touchstart="handleTouchStart"
+            @touchend="handleTouchEnd"
         >
           <button class="works-fullscreen__close" @click.stop="closeFullscreen">✕</button>
-          <img
-              :src="getMainImage(currentWork)"
-              :alt="currentWork.title"
-              class="works-fullscreen__image"
-              @click.stop
-          >
+
+          <button class="works-fullscreen__arrow works-fullscreen__arrow--left" @click.stop="prevSlide">‹</button>
+
+          <Transition :name="direction === 'next' ? 'slide-next' : 'slide-prev'" mode="out-in">
+            <img
+                :key="currentWork.id"
+                :src="getMainImage(currentWork)"
+                :alt="currentWork.title"
+                class="works-fullscreen__image"
+                @click.stop
+            >
+          </Transition>
+
+          <button class="works-fullscreen__arrow works-fullscreen__arrow--right" @click.stop="nextSlide">›</button>
+
+          <span class="works-fullscreen__counter">{{ currentIndex + 1 }} / {{ works.length }}</span>
         </div>
       </Transition>
     </Teleport>
@@ -753,6 +765,43 @@ function closeInquiry() {
   object-fit: contain;
 }
 
+.works-fullscreen__arrow {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1101;
+  font-size: 56px;
+  color: #fff;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 20px;
+  line-height: 1;
+}
+
+.works-fullscreen__arrow:hover {
+  opacity: 1;
+}
+
+.works-fullscreen__arrow--left {
+  left: 16px;
+}
+
+.works-fullscreen__arrow--right {
+  right: 16px;
+}
+
+.works-fullscreen__counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: rgb(255 255 255 / 0.5);
+  letter-spacing: 0.1em;
+}
+
 .works-inquiry__ref {
   font-size: 13px;
   color: var(--text-muted);
@@ -868,6 +917,19 @@ function closeInquiry() {
   .works-overlay__thumb {
     width: 40px;
     height: 52px;
+  }
+
+  .works-fullscreen__arrow {
+    font-size: 40px;
+    padding: 12px;
+  }
+
+  .works-fullscreen__arrow--left {
+    left: 4px;
+  }
+
+  .works-fullscreen__arrow--right {
+    right: 4px;
   }
 }
 </style>

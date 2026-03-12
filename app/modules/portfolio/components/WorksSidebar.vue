@@ -262,7 +262,7 @@ function applyFilters() {
 .sidebar__tab--active {
   background: var(--gold);
   border-color: var(--gold);
-  color: var(--bg-primary);
+  color: white!important;
   font-weight: 500;
 }
 
