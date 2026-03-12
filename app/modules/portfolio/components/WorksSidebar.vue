@@ -64,7 +64,19 @@ const visibleTargetGroups = computed(() =>
     targetGroups.value?.filter(tg => getTargetGroupCount(tg.slug) > 0) ?? []
 )
 
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (props.category) count++
+  if (props.material) count++
+  if (props.targetGroup) count++
+  return count
+})
+
 const isMobileOpen = ref(false)
+
+function applyFilters() {
+  isMobileOpen.value = false
+}
 </script>
 
 <template>
@@ -72,6 +84,7 @@ const isMobileOpen = ref(false)
     <button class="sidebar__mobile-toggle" @click="isMobileOpen = !isMobileOpen">
       <BIcon name="adjustments-horizontal" size="sm" />
       Фільтри
+      <span v-if="activeFiltersCount > 0" class="sidebar__badge">{{ activeFiltersCount }}</span>
       <BIcon :name="isMobileOpen ? 'chevron-up' : 'chevron-down'" size="sm" />
     </button>
 
@@ -151,6 +164,11 @@ const isMobileOpen = ref(false)
         <BIcon name="x-mark" size="sm" />
         Скинути фільтри
       </button>
+
+      <button class="sidebar__apply" @click="applyFilters">
+        Застосувати
+        <span v-if="activeFiltersCount > 0">({{ activeFiltersCount }})</span>
+      </button>
     </div>
   </aside>
 </template>
@@ -175,6 +193,20 @@ const isMobileOpen = ref(false)
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.sidebar__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--gold);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg-primary);
 }
 
 .sidebar__body {
@@ -264,6 +296,26 @@ const isMobileOpen = ref(false)
   color: var(--gold);
 }
 
+.sidebar__apply {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  background: var(--gold);
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bg-primary);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sidebar__apply:hover {
+  opacity: 0.9;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: sticky;
@@ -293,6 +345,10 @@ const isMobileOpen = ref(false)
   }
 
   .sidebar__body--open {
+    display: flex;
+  }
+
+  .sidebar__apply {
     display: flex;
   }
 }

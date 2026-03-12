@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
 import { ROUTES } from '~/modules/common/constants/routes'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useMaterialStore } from '~/modules/material/MaterialStore'
@@ -70,6 +69,15 @@ const visibleBadges = computed(() =>
     badges.filter(item => getBadgeCount(item.value) > 0)
 )
 
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (props.categorySlug) count++
+  if (props.materialSlug) count++
+  if (props.badge) count++
+  if (props.search) count++
+  return count
+})
+
 function selectCategory(slug: string) {
   if (slug) {
     navigateTo(ROUTES.CATALOG_CATEGORY(slug))
@@ -82,12 +90,19 @@ function resetFilters() {
   navigateTo(ROUTES.CATALOG)
   emit('reset')
 }
+
+function applyFilters() {
+  isMobileOpen.value = false
+}
 </script>
 
 <template>
   <aside class="sidebar">
     <button class="sidebar__mobile-toggle" @click="isMobileOpen = !isMobileOpen">
+      <BIcon name="adjustments-horizontal" size="sm" />
       Фільтри
+      <span v-if="activeFiltersCount > 0" class="sidebar__badge">{{ activeFiltersCount }}</span>
+      <BIcon :name="isMobileOpen ? 'chevron-up' : 'chevron-down'" size="sm" />
     </button>
 
     <div class="sidebar__body" :class="{ 'sidebar__body--open': isMobileOpen }">
@@ -171,7 +186,13 @@ function resetFilters() {
       </div>
 
       <button class="sidebar__reset" @click="resetFilters">
+        <BIcon name="x-mark" size="sm" />
         Скинути фільтри
+      </button>
+
+      <button class="sidebar__apply" @click="applyFilters">
+        Застосувати
+        <span v-if="activeFiltersCount > 0">({{ activeFiltersCount }})</span>
       </button>
     </div>
   </aside>
@@ -186,6 +207,9 @@ function resetFilters() {
 .sidebar__mobile-toggle {
   display: none;
   width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -194,6 +218,20 @@ function resetFilters() {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.sidebar__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--gold);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg-primary);
 }
 
 .sidebar__body {
@@ -283,17 +321,59 @@ function resetFilters() {
   color: var(--gold);
 }
 
+.sidebar__apply {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  background: var(--gold);
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bg-primary);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sidebar__apply:hover {
+  opacity: 0.9;
+}
+
 @media (max-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 60px;
+    z-index: 20;
+    margin: 0 -24px;
+    padding: 0 24px;
+    background: var(--bg-primary);
+  }
+
   .sidebar__mobile-toggle {
     display: flex;
-    justify-content: center;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--bg-primary);
+    padding: 14px 0;
   }
 
   .sidebar__body {
     display: none;
+    margin-top: 0;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 70vh;
+    overflow-y: auto;
   }
 
   .sidebar__body--open {
+    display: flex;
+  }
+
+  .sidebar__apply {
     display: flex;
   }
 }
