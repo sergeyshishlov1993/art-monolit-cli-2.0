@@ -36,11 +36,23 @@ const characteristics = computed(() => {
   return items
 })
 
+const categoryDescriptionMap: Record<string, string> = {
+  'Одинарні': 'одинарних пам\'ятників',
+  'Подвійні': 'подвійних пам\'ятників',
+  'Комплекси': 'меморіальних комплексів',
+  'Військові': 'військових пам\'ятників',
+  'Хрести': 'надгробних хрестів',
+  'Аксесуари': 'аксесуарів для пам\'ятників',
+}
+
 const descriptionFull = computed(() => {
   if (props.product.description) return props.product.description
+
   const title = props.product.title || 'Виріб'
-  const category = props.product.category?.name || ''
-  return `${title} — це якісний виріб від компанії ART MONOLIT із категорії «${category}». Виготовлений з натуральних матеріалів із дотриманням найвищих стандартів якості. Ми пропонуємо індивідуальний підхід до кожного замовлення — розміри, матеріал та дизайн можуть бути адаптовані під ваші побажання. Зв'яжіться з нами, щоб дізнатися деталі та отримати розрахунок вартості.`
+  const categoryName = props.product.category?.name || ''
+  const categoryText = categoryDescriptionMap[categoryName] || categoryName.toLowerCase()
+
+  return `${title} - якісний виріб із категорії ${categoryText}. Виготовлений із дотриманням найвищих стандартів якості. За бажанням можна доукомплектувати додатковими аксесуарами - вазами, хрестами, лампадками та іншими елементами оздоблення. Розміри, матеріал та дизайн адаптуються під ваші побажання. Зв'яжіться з нами, щоб дізнатися деталі та отримати розрахунок вартості.`
 })
 
 const isDescriptionLong = computed(() => descriptionFull.value.length > DESC_MAX_LENGTH)
