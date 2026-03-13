@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { useToast } from '~/modules/common/composables/useToast'
 
 interface ExistingImage {
   id: string
@@ -22,6 +22,7 @@ const props = withDefaults(defineProps<{
   backLabel?: string
   backTo?: string
   pageTitle?: string
+  onSave?: (data: HeroSlideFormData, photo: File | null, deletePhoto: boolean) => Promise<void>
 }>(), {
   initialData: () => ({}),
   initialImage: null,
@@ -31,9 +32,7 @@ const props = withDefaults(defineProps<{
   pageTitle: 'Новий слайд',
 })
 
-const emit = defineEmits<{
-  save: [data: HeroSlideFormData, photo: File | null, deletePhoto: boolean]
-}>()
+const toast = useToast()
 
 const form = reactive<HeroSlideFormData>({
   title: props.initialData.title || '',
@@ -77,13 +76,18 @@ function removePhoto() {
   }
 }
 
-function handleSubmit() {
+async function handleSubmit() {
+  if (!props.onSave) return
   isSaving.value = true
-  emit('save', { ...form }, photo.value, deleteExistingImage.value)
-  isSaving.value = false
+  try {
+    await props.onSave({ ...form }, photo.value, deleteExistingImage.value)
+    toast.success('Слайд збережено')
+  } catch {
+    toast.error('Помилка при збереженні слайду')
+  } finally {
+    isSaving.value = false
+  }
 }
-
-defineExpose({ isSaving })
 </script>
 
 <template>

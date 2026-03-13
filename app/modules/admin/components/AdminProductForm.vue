@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import type { Product } from '~/modules/product/types'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useTargetGroupStore } from '~/modules/target-group/TargetGroupStore'
 import { useMaterialStore } from '~/modules/material/MaterialStore'
 import { useSlug } from '~/modules/common/composables/useSlug'
+import { useToast } from '~/modules/common/composables/useToast'
 import type { ProductBadge } from '~/modules/product/types'
 
 interface SpecRow {
@@ -41,6 +42,8 @@ const props = withDefaults(defineProps<{
   backTo?: string
   pageTitle?: string
   showDelete?: boolean
+  onSave?: (data: ProductFormData, photos: File[], deletedImageIds: string[]) => Promise<void>
+  onDelete?: () => Promise<void>
 }>(), {
   initialData: () => ({}),
   initialPhotos: () => [],
@@ -51,12 +54,8 @@ const props = withDefaults(defineProps<{
   showDelete: false,
 })
 
-const emit = defineEmits<{
-  save: [data: ProductFormData, photos: File[], deletedImageIds: string[]]
-  delete: []
-}>()
-
 const { toSlug } = useSlug()
+const toast = useToast()
 const categoryStore = useCategoryStore()
 const targetGroupStore = useTargetGroupStore()
 const materialStore = useMaterialStore()
@@ -309,18 +308,32 @@ function setMainImage(imageId: string) {
   }))
 }
 
-function handleDelete() {
+async function handleDelete() {
   showDeleteConfirm.value = false
-  emit('delete')
-}
-
-function handleSubmit() {
+  if (!props.onDelete) return
   isSaving.value = true
-  emit('save', { ...form, specs: [...form.specs] }, [...photos.value], [...deletedImageIds.value])
-  isSaving.value = false
+  try {
+    await props.onDelete()
+    toast.success('Товар видалено')
+  } catch {
+    toast.error('Помилка при видаленні товару')
+  } finally {
+    isSaving.value = false
+  }
 }
 
-defineExpose({ isSaving })
+async function handleSubmit() {
+  if (!props.onSave) return
+  isSaving.value = true
+  try {
+    await props.onSave({ ...form, specs: [...form.specs] }, [...photos.value], [...deletedImageIds.value])
+    toast.success('Товар збережено')
+  } catch {
+    toast.error('Помилка при збереженні товару')
+  } finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <template>

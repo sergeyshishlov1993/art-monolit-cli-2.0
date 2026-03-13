@@ -15,20 +15,19 @@ async function handleSave(data: Record<string, unknown>, photos: File[]) {
   const { specs: _, ...productData } = data
 
   const product = await productStore.create(productData) as { id: string }
+
   for (let index = 0; index < photos.length; index++) {
     await productStore.uploadImage(product.id, photos[index], index === 0)
   }
 
   for (const spec of specs) {
     if (spec.key && spec.value) {
-      console.log('adding spec to:', product.id, spec)
       await productApi.addSpec(product.id, spec)
     }
   }
 
   await router.push(ROUTES.ADMIN.PRODUCTS)
 }
-
 </script>
 
 <template>
@@ -37,6 +36,6 @@ async function handleSave(data: Record<string, unknown>, photos: File[]) {
       submit-label="Створити товар"
       back-label="Товари"
       :back-to="ROUTES.ADMIN.PRODUCTS"
-      @save="handleSave"
+      :on-save="handleSave"
   />
 </template>

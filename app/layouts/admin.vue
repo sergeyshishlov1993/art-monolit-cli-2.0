@@ -87,6 +87,8 @@ watch(() => route.path, closeMobileMenu)
     <main class="admin__main">
       <slot />
     </main>
+
+    <BToast />
   </div>
 </template>
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useTargetGroupStore } from '~/modules/target-group/TargetGroupStore'
 import { useMaterialStore } from '~/modules/material/MaterialStore'
@@ -11,8 +10,6 @@ interface ExistingImage {
 }
 
 interface PortfolioFormData {
-  title: string
-  description: string
   categoryId: string
   targetGroupIds: string[]
   materialIds: string[]
@@ -27,6 +24,13 @@ const props = withDefaults(defineProps<{
   backLabel?: string
   backTo?: string
   pageTitle?: string
+  pageDesc?: string
+  multiple?: boolean
+  showSettings?: boolean
+  showDelete?: boolean
+  isSaving?: boolean
+  isDeleting?: boolean
+  uploadProgress?: { current: number; total: number } | null
 }>(), {
   initialData: () => ({}),
   initialPhoto: null,
@@ -34,10 +38,18 @@ const props = withDefaults(defineProps<{
   backLabel: 'Портфолiо',
   backTo: '',
   pageTitle: 'Нова робота',
+  pageDesc: '',
+  multiple: false,
+  showSettings: false,
+  showDelete: false,
+  isSaving: false,
+  isDeleting: false,
+  uploadProgress: null,
 })
 
 const emit = defineEmits<{
-  save: [data: PortfolioFormData, photo: File | null, deletePhoto: boolean]
+  save: [data: PortfolioFormData, files: File[], deletePhoto: boolean]
+  delete: []
 }>()
 
 const { toSlug } = useSlug()
@@ -67,8 +79,6 @@ const materialOptions = computed(() =>
 )
 
 const form = reactive<PortfolioFormData>({
-  title: props.initialData.title || '',
-  description: props.initialData.description || '',
   categoryId: props.initialData.categoryId || categoryStore.categories[0]?.id || '',
   targetGroupIds: props.initialData.targetGroupIds || [],
   materialIds: props.initialData.materialIds || [],
@@ -76,10 +86,10 @@ const form = reactive<PortfolioFormData>({
   isActive: props.initialData.isActive ?? true,
 })
 
-const photo = ref<File | null>(null)
+const files = ref<File[]>([])
 const existingPhoto = ref<ExistingImage | null>(props.initialPhoto ? { ...props.initialPhoto } : null)
 const deleteExistingPhoto = ref(false)
-const isSaving = ref(false)
+const showDeleteConfirm = ref(false)
 
 const newTargetGroupName = ref('')
 const isAddingTargetGroup = ref(false)
@@ -89,25 +99,18 @@ const newMaterialName = ref('')
 const isAddingMaterial = ref(false)
 const materialSaving = ref(false)
 
-const photoPreview = computed(() => {
-  if (photo.value) return URL.createObjectURL(photo.value)
-  if (existingPhoto.value && !deleteExistingPhoto.value) return existingPhoto.value.url
-  return null
+const hasExistingVisible = computed(() =>
+    existingPhoto.value !== null && !deleteExistingPhoto.value
+)
+
+const canSubmit = computed(() => {
+  if (!form.categoryId) return false
+  if (props.multiple) return files.value.length > 0
+  return files.value.length > 0 || hasExistingVisible.value
 })
 
-function onFileChange(files: File[]) {
-  const file = files[0]
-  if (file) {
-    photo.value = file
-    deleteExistingPhoto.value = true
-  }
-}
-
-function removePhoto() {
-  photo.value = null
-  if (existingPhoto.value) {
-    deleteExistingPhoto.value = true
-  }
+function removeExistingPhoto() {
+  deleteExistingPhoto.value = true
 }
 
 function toggleTargetGroup(targetGroupId: string) {
@@ -167,12 +170,12 @@ function cancelAddMaterial() {
 }
 
 function handleSubmit() {
-  isSaving.value = true
-  emit('save', { ...form }, photo.value, deleteExistingPhoto.value)
-  isSaving.value = false
+  emit('save', { ...form }, [...files.value], deleteExistingPhoto.value)
 }
 
-defineExpose({ isSaving })
+function handleDelete() {
+  emit('delete')
+}
 </script>
 
 <template>
@@ -183,41 +186,33 @@ defineExpose({ isSaving })
         {{ backLabel }}
       </NuxtLink>
       <h1 class="admin-edit__title">{{ pageTitle }}</h1>
+      <p v-if="pageDesc" class="admin-edit__desc">{{ pageDesc }}</p>
     </div>
 
     <form class="admin-edit__body" @submit.prevent="handleSubmit">
       <div class="admin-edit__main">
         <div class="admin-card">
-          <h3 class="admin-card__title">Основне</h3>
-          <div class="admin-form">
-            <BInput v-model="form.title" label="Назва" placeholder="Памятник Класика" required />
-            <BTextarea v-model="form.description" label="Опис" placeholder="Опис роботи..." />
-          </div>
-        </div>
+          <h3 class="admin-card__title">
+            Фото<template v-if="multiple"> ({{ files.length }})</template>
+          </h3>
 
-        <div class="admin-card">
-          <h3 class="admin-card__title">Фото</h3>
-
-          <div v-if="photoPreview" class="admin-single-photo">
-            <img :src="photoPreview" alt="Фото роботи" class="admin-single-photo__img" />
-            <div class="admin-single-photo__overlay">
-              <button
-                  type="button"
-                  class="admin-photo__btn admin-photo__btn--danger"
-                  title="Видалити"
-                  @click="removePhoto"
-              >
-                <BIcon name="trash" size="sm" />
-              </button>
-            </div>
+          <div v-if="hasExistingVisible" class="admin-existing-photo">
+            <BPreview
+                :src="existingPhoto!.url"
+                alt="Поточне фото"
+                removable
+                aspect-ratio="3/4"
+                @remove="removeExistingPhoto"
+            />
           </div>
 
           <BFileUpload
-              v-if="!photoPreview"
-              label="Завантажити фото"
+              v-if="multiple || !hasExistingVisible"
+              v-model="files"
+              label="Додати фото"
               accept="image/*"
-              :max-size="5"
-              @update:model-value="onFileChange"
+              :max-size="50"
+              :multiple="multiple"
           />
         </div>
       </div>
@@ -229,7 +224,6 @@ defineExpose({ isSaving })
             <BSelect
                 v-model="form.categoryId"
                 :options="categoryOptions"
-                label="Категорiя"
                 placeholder="Оберiть категорiю..."
                 required
             />
@@ -324,7 +318,7 @@ defineExpose({ isSaving })
           </button>
         </div>
 
-        <div class="admin-card">
+        <div v-if="showSettings" class="admin-card">
           <h3 class="admin-card__title">Налаштування</h3>
           <div class="admin-form">
             <BInput
@@ -342,16 +336,43 @@ defineExpose({ isSaving })
         </div>
 
         <div class="admin-card admin-card--actions">
-          <BButton type="submit" block :loading="isSaving">
-            <BIcon name="check" size="sm" />
-            {{ submitLabel }}
+          <div v-if="uploadProgress" class="upload-progress">
+            <div class="upload-progress__bar">
+              <div
+                  class="upload-progress__fill"
+                  :style="{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }"
+              />
+            </div>
+            <span class="upload-progress__text">
+              {{ uploadProgress.current }} / {{ uploadProgress.total }}
+            </span>
+          </div>
+
+          <BButton type="submit" block :disabled="!canSubmit || isSaving" :loading="isSaving">
+            <BIcon v-if="multiple" name="upload" size="sm" />
+            <BIcon v-else name="check" size="sm" />
+            {{ multiple ? `Завантажити ${files.length} фото` : submitLabel }}
           </BButton>
           <BButton variant="ghost" block :to="backTo">
             Скасувати
           </BButton>
         </div>
+
+        <div v-if="showDelete" class="admin-card">
+          <BButton variant="danger" block :loading="isDeleting" @click="showDeleteConfirm = true">
+            Видалити роботу
+          </BButton>
+        </div>
       </div>
     </form>
+
+    <BModal v-if="showDelete" v-model="showDeleteConfirm" title="Видалити роботу?">
+      <p class="admin-confirm-text">Роботу та всі її зображення буде видалено назавжди.</p>
+      <template #footer>
+        <BButton variant="ghost" @click="showDeleteConfirm = false">Скасувати</BButton>
+        <BButton variant="danger" :loading="isDeleting" @click="handleDelete">Видалити</BButton>
+      </template>
+    </BModal>
   </div>
 </template>
 
@@ -385,6 +406,12 @@ defineExpose({ isSaving })
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.admin-edit__desc {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .admin-edit__body {
@@ -464,59 +491,9 @@ defineExpose({ isSaving })
   margin-bottom: 12px;
 }
 
-.admin-single-photo {
-  position: relative;
-  max-width: 320px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid var(--border);
+.admin-existing-photo {
+  max-width: 200px;
   margin-bottom: 16px;
-}
-
-.admin-single-photo__img {
-  width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  display: block;
-}
-
-.admin-single-photo__overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--overlay);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.admin-single-photo:hover .admin-single-photo__overlay {
-  opacity: 1;
-}
-
-.admin-photo__btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.admin-photo__btn:hover {
-  border-color: var(--border-hover);
-}
-
-.admin-photo__btn--danger:hover {
-  background: var(--error);
-  border-color: var(--error);
-  color: #fff;
 }
 
 .admin-inline-add {
@@ -549,6 +526,40 @@ defineExpose({ isSaving })
 
 .admin-add-link:hover {
   color: var(--gold-hover);
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-progress__bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.upload-progress__fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.3s;
+}
+
+.upload-progress__text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 50px;
+  text-align: right;
+}
+
+.admin-confirm-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 1024px) {

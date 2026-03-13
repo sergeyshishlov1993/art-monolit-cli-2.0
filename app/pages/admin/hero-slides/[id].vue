@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 import { useHeroApi } from '~/modules/hero/HeroApi'
 import { ROUTES } from '~/modules/common/constants/routes'
-import type { HeroSlide } from '~/modules/hero/types'
 import AdminHeroSlideForm from '~/modules/admin/components/AdminHeroSlideForm.vue'
 
 definePageMeta({ layout: 'admin' })
@@ -45,7 +42,7 @@ async function handleSave(data: Record<string, unknown>, photo: File | null) {
     await heroApi.uploadImage(slideId, photo)
   }
 
-  router.push(ROUTES.ADMIN.HERO_SLIDES)
+  await router.push(ROUTES.ADMIN.HERO_SLIDES)
 }
 </script>
 
@@ -60,7 +57,7 @@ async function handleSave(data: Record<string, unknown>, photo: File | null) {
       :back-to="ROUTES.ADMIN.HERO_SLIDES"
       :initial-data="initialData"
       :initial-image="initialImage"
-      @save="handleSave"
+      :on-save="handleSave"
   />
 </template>
 
