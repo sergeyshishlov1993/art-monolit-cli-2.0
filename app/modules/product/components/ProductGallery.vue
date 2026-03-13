@@ -17,7 +17,10 @@ const badgeLabels: Record<string, string> = {
 
 const slides = computed(() =>
     (props.product.images ?? [])
-        .toSorted((a, b) => a.sortOrder - b.sortOrder)
+        .toSorted((a, b) => {
+          if (a.isMain !== b.isMain) return a.isMain ? -1 : 1
+          return a.sortOrder - b.sortOrder
+        })
         .map((img) => ({ image: img.url, alt: img.alt || props.product.title || '' }))
 )
 
