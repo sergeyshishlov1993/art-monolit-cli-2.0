@@ -169,7 +169,7 @@ onUnmounted(() => {
 }
 
 .gallery__badge--new { background: #1565c0; }
-.gallery__badge--hit { background: var(--gold); color: #000; }
+.gallery__badge--hit { background: var(--gold); color: white; }
 .gallery__badge--sale { background: #c62828; }
 .gallery__badge--discount { background: #c62828; font-size: 14px; font-weight: 800; }
 
