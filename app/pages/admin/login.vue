@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/modules/auth/AuthStore'
+import { ROUTES } from '~/modules/common/constants/routes'
 
 definePageMeta({ layout: false })
+
+const authStore = useAuthStore()
+authStore.init()
+
+if (authStore.isAuthenticated) {
+  await navigateTo(ROUTES.ADMIN.ROOT)
+}
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
-const authStore = useAuthStore()
 
 async function handleLogin() {
   error.value = ''
@@ -16,7 +23,7 @@ async function handleLogin() {
 
   try {
     await authStore.login(email.value, password.value)
-    navigateTo('/admin')
+    navigateTo(ROUTES.ADMIN.ROOT)
   } catch {
     error.value = 'Невірний email або пароль'
   } finally {

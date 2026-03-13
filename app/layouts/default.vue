@@ -1,25 +1,27 @@
 <script setup lang="ts">
 import { ROUTES } from "~/modules/common/constants/routes"
+import { useCategoryStore } from '~/modules/category/CategoryStore'
 
-const navItems = [
+const categoryStore = useCategoryStore()
+
+await categoryStore.fetchAll()
+
+const navItems = computed(() => [
   {
     label: 'Каталог',
     to: ROUTES.CATALOG,
-    children: [
-      { label: 'Одинарні', to: ROUTES.CATALOG_CATEGORY('single') },
-      { label: 'Подвійні', to: ROUTES.CATALOG_CATEGORY('double') },
-      { label: 'Комплекси', to: ROUTES.CATALOG_CATEGORY('complex') },
-      { label: 'Огорожі', to: ROUTES.CATALOG_CATEGORY('borders') },
-      { label: 'Плитка та вази', to: ROUTES.CATALOG_CATEGORY('tiles') },
-    ],
+    children: categoryStore.categories.map(cat => ({
+      label: cat.name,
+      to: ROUTES.CATALOG_CATEGORY(cat.slug),
+    })),
   },
   { label: 'Портфоліо', to: ROUTES.PORTFOLIO },
   { label: 'Доставка', to: ROUTES.DELIVERY },
   { label: 'Про нас', to: ROUTES.ABOUT },
   { label: 'Контакти', to: ROUTES.CONTACTS },
-]
+])
 
-const footerColumns = [
+const footerColumns = computed(() => [
   {
     title: 'Навігація',
     links: [
@@ -31,14 +33,12 @@ const footerColumns = [
   },
   {
     title: 'Каталог',
-    links: [
-      { label: 'Одинарні', to: ROUTES.CATALOG_CATEGORY('single') },
-      { label: 'Подвійні', to: ROUTES.CATALOG_CATEGORY('double') },
-      { label: 'Комплекси', to: ROUTES.CATALOG_CATEGORY('complex') },
-      { label: 'Огорожі', to: ROUTES.CATALOG_CATEGORY('borders') },
-    ],
+    links: categoryStore.categories.slice(0, 5).map(cat => ({
+      label: cat.name,
+      to: ROUTES.CATALOG_CATEGORY(cat.slug),
+    })),
   },
-]
+])
 
 const footerContacts = [
   { icon: 'location' as const, text: 'м. Київ, вул. Прикладна 1' },

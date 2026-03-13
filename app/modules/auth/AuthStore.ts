@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useAuthApi } from './AuthApi'
 import type { AdminUser } from './types'
+import { ROUTES } from '~/modules/common/constants/routes'
 
 const ACCESS_TOKEN_KEY = 'accessToken'
 const REFRESH_TOKEN_KEY = 'refreshToken'
@@ -11,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
     const token = ref<string | null>(null)
     const refreshTokenValue = ref<string | null>(null)
     const user = ref<AdminUser | null>(null)
+    const initialized = ref(false)
 
     const isAuthenticated = computed(() => !!token.value)
 
@@ -46,29 +48,29 @@ export const useAuthStore = defineStore('auth', () => {
             localStorage.removeItem(ACCESS_TOKEN_KEY)
             localStorage.removeItem(REFRESH_TOKEN_KEY)
         }
-        navigateTo('/admin/login')
-    }
-
-    function syncTokensFromStorage() {
-        if (!import.meta.client) return
-        const savedAccess = localStorage.getItem(ACCESS_TOKEN_KEY)
-        const savedRefresh = localStorage.getItem(REFRESH_TOKEN_KEY)
-        if (savedAccess && savedRefresh) {
-            token.value = savedAccess
-            refreshTokenValue.value = savedRefresh
-        }
+        navigateTo(ROUTES.ADMIN.LOGIN)
     }
 
     function init() {
-        syncTokensFromStorage()
-        if (isAuthenticated.value) {
+        if (!import.meta.client) return
+        if (initialized.value && token.value) return
+
+        const savedAccess = localStorage.getItem(ACCESS_TOKEN_KEY)
+        const savedRefresh = localStorage.getItem(REFRESH_TOKEN_KEY)
+
+        if (savedAccess && savedRefresh) {
+            token.value = savedAccess
+            refreshTokenValue.value = savedRefresh
             fetchProfile()
         }
+
+        initialized.value = true
     }
 
     return {
         token,
         user,
+        initialized,
         isAuthenticated,
         login,
         logout,
