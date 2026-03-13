@@ -42,6 +42,9 @@ export function useProductApi() {
         remove: (id: string) =>
             $api<void>(`/products/${id}`, { method: 'DELETE' }),
 
+        setMainImage: (productId: string, imageId: string) =>
+            $api<Product>(`/products/${productId}/main-image/${imageId}`, { method: 'PUT' }),
+
         uploadImage: (productId: string, file: File, isMain = false, alt = '') => {
             const formData = new FormData()
             formData.append('file', file)

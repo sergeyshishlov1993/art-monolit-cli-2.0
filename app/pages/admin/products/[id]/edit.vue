@@ -45,7 +45,7 @@ onMounted(async () => {
   loading.value = false
 })
 
-async function handleSave(data: Record<string, unknown>, photos: File[], deletedImageIds: string[]) {
+async function handleSave(data: Record<string, unknown>, photos: File[], deletedImageIds: string[], mainImageId: string | null) {
   await productStore.update(productId.value, data)
 
   for (const imageId of deletedImageIds) {
@@ -54,6 +54,10 @@ async function handleSave(data: Record<string, unknown>, photos: File[], deleted
 
   for (const file of photos) {
     await productStore.uploadImage(productId.value, file)
+  }
+
+  if (mainImageId) {
+    await productStore.setMainImage(productId.value, mainImageId)
   }
 
   await router.push(ROUTES.ADMIN.PRODUCTS)

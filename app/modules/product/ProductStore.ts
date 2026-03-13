@@ -74,6 +74,10 @@ export const useProductStore = defineStore('product', () => {
         return api.remove(id)
     }
 
+    async function setMainImage(productId: string, imageId: string) {
+        return api.setMainImage(productId, imageId)
+    }
+
     async function uploadImage(productId: string, file: File, isMain = false, alt = '') {
         return api.uploadImage(productId, file, isMain, alt)
     }
@@ -99,6 +103,7 @@ export const useProductStore = defineStore('product', () => {
         create,
         update,
         remove,
+        setMainImage,
         uploadImage,
         deleteImage,
     }

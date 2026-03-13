@@ -42,7 +42,7 @@ const props = withDefaults(defineProps<{
   backTo?: string
   pageTitle?: string
   showDelete?: boolean
-  onSave?: (data: ProductFormData, photos: File[], deletedImageIds: string[]) => Promise<void>
+  onSave?: (data: ProductFormData, photos: File[], deletedImageIds: string[], mainImageId: string | null) => Promise<void>
   onDelete?: () => Promise<void>
 }>(), {
   initialData: () => ({}),
@@ -128,6 +128,20 @@ const slugManuallyEdited = ref(!!props.initialData.slug)
 const seoTitleManuallyEdited = ref(!!props.initialData.seoTitle)
 
 const hasSaleBadge = computed(() => form.badges.includes('SALE'))
+
+const initialMainImageId = computed(() => {
+  const initialMain = props.initialPhotos.find(image => image.isMain)
+  return initialMain?.id ?? null
+})
+
+const currentMainImageId = computed(() => {
+  const currentMain = existingImages.value.find(image => image.isMain)
+  return currentMain?.id ?? null
+})
+
+const mainImageChanged = computed(() =>
+    currentMainImageId.value !== initialMainImageId.value
+)
 
 watch(hasSaleBadge, (isSale) => {
   if (!isSale) form.discountPercent = null
@@ -326,7 +340,13 @@ async function handleSubmit() {
   if (!props.onSave) return
   isSaving.value = true
   try {
-    await props.onSave({ ...form, specs: [...form.specs] }, [...photos.value], [...deletedImageIds.value])
+    const mainId = mainImageChanged.value ? currentMainImageId.value : null
+    await props.onSave(
+        { ...form, specs: [...form.specs] },
+        [...photos.value],
+        [...deletedImageIds.value],
+        mainId,
+    )
     toast.success('Товар збережено')
   } catch {
     toast.error('Помилка при збереженні товару')
