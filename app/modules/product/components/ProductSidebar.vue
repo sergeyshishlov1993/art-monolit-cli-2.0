@@ -403,7 +403,6 @@ function applyFilters() {
     position: sticky;
     top: 60px;
     z-index: 20;
-    margin: 0 -24px;
     padding: 0 24px;
     background: var(--bg-primary);
     overflow: hidden;
