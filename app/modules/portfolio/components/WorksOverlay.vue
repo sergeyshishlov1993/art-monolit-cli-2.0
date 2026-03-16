@@ -97,6 +97,10 @@ function nextSlide() {
       : currentIndex.value + 1
 }
 
+function openFullscreen() {
+  fullscreenOpen.value = true
+}
+
 let touchStartX = 0
 
 function handleTouchStart(event: TouchEvent) {
@@ -154,13 +158,14 @@ onUnmounted(() => {
         <button class="works-overlay__arrow works-overlay__arrow--left" @click="prevSlide">‹</button>
 
         <div class="works-overlay__center">
-          <div class="works-overlay__image-wrap" @click="fullscreenOpen = true">
+          <div class="works-overlay__image-wrap">
             <Transition :name="direction === 'next' ? 'slide-next' : 'slide-prev'" mode="out-in">
               <img
                   :key="currentWork.id"
                   :src="getMainImage(currentWork)"
                   :alt="currentWork.title"
                   class="works-overlay__image"
+                  @click="openFullscreen"
               >
             </Transition>
           </div>
@@ -241,13 +246,17 @@ onUnmounted(() => {
   all: unset;
   cursor: pointer;
   position: absolute;
-  top: 24px;
-  right: 28px;
-  z-index: 1001;
-  font-size: 28px;
+  top: 16px;
+  right: 16px;
+  z-index: 1002;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
   color: #fff;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  opacity: 0.85;
   line-height: 1;
 }
 
@@ -290,7 +299,8 @@ onUnmounted(() => {
   gap: 16px;
   max-width: 90vw;
   width: 100%;
-  max-height: 90vh;
+  height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px);
   box-sizing: border-box;
 }
 
@@ -301,15 +311,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: zoom-in;
 }
 
 .works-overlay__image {
   display: block;
-  max-height: 100%;
   max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 8px;
+  cursor: zoom-in;
 }
 
 .works-overlay__end-message {
@@ -518,9 +528,11 @@ onUnmounted(() => {
   }
 
   .works-overlay__close {
-    top: 16px;
-    right: 16px;
-    font-size: 24px;
+    top: 12px;
+    right: 12px;
+    width: 56px;
+    height: 56px;
+    font-size: 36px;
   }
 
   .works-overlay__arrow {
