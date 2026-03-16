@@ -273,7 +273,7 @@ function closeInquiry(): void {
 
 @media (max-width: 480px) {
   .catalog-grid__items {
-    grid-template-columns: 1fr;
+    //grid-template-columns: 1fr;
     min-height: 320px;
   }
 

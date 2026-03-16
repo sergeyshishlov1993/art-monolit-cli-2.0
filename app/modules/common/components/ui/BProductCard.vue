@@ -8,11 +8,13 @@ interface Props {
   category: string
   alt?: string
   badge?: string
+  imageType?: 'portrait' | 'landscape'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   alt: '',
   badge: '',
+  imageType: 'landscape',
 })
 
 const emit = defineEmits<{
@@ -48,17 +50,19 @@ const badgeClass = computed(() => {
           {{ props.badge }}
         </div>
       </div>
-
-      <span class="product-card__title">{{ props.title }}</span>
     </NuxtLink>
 
-    <div class="product-card__actions">
+    <div class="product-card__footer">
+      <span class="product-card__title">{{ props.title }}</span>
       <button
           type="button"
           class="product-card__btn"
           @click="emit('inquiry')"
       >
-        Дізнатись вартість
+        <svg class="product-card__btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Дізнатись ціну
       </button>
     </div>
   </div>
@@ -68,34 +72,39 @@ const badgeClass = computed(() => {
 .product-card {
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s;
 }
 
 .product-card:hover {
-  border-color: var(--gold);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .product-card__link {
   display: flex;
-  flex-direction: column;
   text-decoration: none;
   color: inherit;
 }
 
 .product-card__image-wrap {
   position: relative;
-  aspect-ratio: 3 / 4;
+  height: 280px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
   overflow: hidden;
+  border-radius: 12px 12px 0 0;
 }
 
 .product-card__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   transition: transform 0.3s;
 }
 
@@ -104,12 +113,9 @@ const badgeClass = computed(() => {
 }
 
 .product-card__placeholder {
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-secondary);
   color: var(--text-muted);
   font-size: 13px;
 }
@@ -140,35 +146,80 @@ const badgeClass = computed(() => {
   background: #ed6c02;
 }
 
+.product-card__footer {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .product-card__title {
-  padding: 12px 16px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.product-card__actions {
-  padding: 12px 16px 16px;
+  line-height: 1.4;
 }
 
 .product-card__btn {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  background: #d32f2f;
-  color: #fff;
+  border: 2px solid #d32f2f;
+  border-radius: 6px;
+  background: transparent;
+  color: #d32f2f;
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: 0 2px 8px rgba(153, 0, 24, 0.3);
+  transition: all 0.3s;
 }
 
 .product-card__btn:hover {
-  background: #b3001c;
+  background: #d32f2f;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+.product-card__btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 480px) {
+  .product-card__image-wrap {
+    height: 200px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .product-card {
+    border-radius: 8px;
+  }
+
+  .product-card__footer {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .product-card__title {
+    font-size: 12px;
+  }
+
+  .product-card__btn {
+    padding: 8px 12px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .product-card__btn-icon {
+    width: 14px;
+    height: 14px;
+  }
 }
 </style>
+

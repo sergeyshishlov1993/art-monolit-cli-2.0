@@ -118,6 +118,10 @@ function resetFilters() {
 }
 
 @media (max-width: 768px) {
+  .catalog-page {
+    padding: 40px 10px;
+  }
+
   .catalog-page__body {
     grid-template-columns: 1fr;
   }
