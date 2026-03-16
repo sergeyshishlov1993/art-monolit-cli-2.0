@@ -1,66 +1,37 @@
-export interface ProductImage {
+export interface PortfolioImageRef {
     id: string
-    productId: string
+    slug: string
+    name: string
+}
+
+export interface PortfolioImage {
+    id: string
+    portfolioWorkId: string
     s3Key: string
     url: string
     sortOrder: number
     alt: string | null
-    isMain: boolean
     createdAt: string
 }
 
-export interface ProductCategory {
+export interface PortfolioWork {
     id: string
-    name: string
-    slug: string
-    description: string | null
-    imageUrl: string | null
-    sortOrder: number
-    isActive: boolean
-    createdAt: string
-    updatedAt: string
-}
-
-export interface ProductMaterial {
-    id: string
-    name: string
-    slug: string
-    sortOrder: number
-    isActive: boolean
-}
-
-export interface ProductTargetGroup {
-    id: string
-    name: string
-    slug: string
-    sortOrder: number
-    isActive: boolean
-}
-
-export interface Product {
-    id: string
-    title: string
-    slug: string
-    description: string | null
     categoryId: string
-    materialId: string | null
-    targetGroupId: string | null
-    price: number | null
-    oldPrice: number | null
-    discountPercent: number | null
-    badges: string[]
-    isActive: boolean
     sortOrder: number
+    isActive: boolean
     createdAt: string
     updatedAt: string
-    category: ProductCategory
-    material: ProductMaterial | null
-    targetGroup: ProductTargetGroup | null
-    images: ProductImage[]
+    category: PortfolioImageRef
+    targetGroups: PortfolioImageRef[]
+    materials: PortfolioImageRef[]
+    images: PortfolioImage[]
+    _count?: {
+        images: number
+    }
 }
 
-export interface ProductListResponse {
-    items: Product[]
+export interface PortfolioListResponse {
+    items: PortfolioWork[]
     total: number
     page: number
     limit: number
@@ -68,45 +39,14 @@ export interface ProductListResponse {
     hasMore: boolean
 }
 
-export interface ProductFilters {
-    page?: number
-    limit?: number
-    categoryId?: string
-    material?: string
-    badge?: string
-    targetGroup?: string
-    search?: string
-}
-
-export interface FilterCategoryCountItem {
-    id: string
-    name: string
-    slug: string
-    description: string
-    imageUrl: string | null
-    sortOrder: number
-    isActive: boolean
-    createdAt: string
-    updatedAt: string
-    _count: {
-        products: number
-    }
-}
-
-export interface FilterCountItem {
+export interface PortfolioFilterCountItem {
     slug: string
     count: number
 }
 
-export interface FilterBadgeCountItem {
-    badge: string
-    count: number
-}
-
-export interface FilterCounts {
+export interface PortfolioFilterCounts {
     total: number
-    categories: FilterCategoryCountItem[]
-    materials: FilterCountItem[]
-    targetGroups: FilterCountItem[]
-    badges: FilterBadgeCountItem[]
+    categories: PortfolioFilterCountItem[]
+    materials: PortfolioFilterCountItem[]
+    targetGroups: PortfolioFilterCountItem[]
 }

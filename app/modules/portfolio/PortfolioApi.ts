@@ -1,4 +1,4 @@
-import type { PortfolioWork, PortfolioImage, PortfolioListResponse, FilterCounts } from './types'
+import type { PortfolioWork, PortfolioImage, PortfolioListResponse, PortfolioFilterCounts } from './types'
 
 export interface PortfolioGetAllParams {
     all?: boolean
@@ -29,7 +29,7 @@ export function usePortfolioApi() {
         getCounts: (params: { categoryId?: string } = {}) => {
             const query: Record<string, string> = {}
             if (params.categoryId) query.categoryId = params.categoryId
-            return $api<FilterCounts>('/portfolio/counts', { query })
+            return $api<PortfolioFilterCounts>('/portfolio/counts', { query })
         },
 
         getById: (id: string) =>
