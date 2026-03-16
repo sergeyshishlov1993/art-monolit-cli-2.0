@@ -15,7 +15,7 @@ const emit = defineEmits<{
 
 const mainImage = computed(() => {
   if (!props.work.images.length) return ''
-  const sorted = [...props.work.images].sort((a, b) => a.sortOrder - b.sortOrder)
+  const sorted = [...props.work.images].sort((firstImage, secondImage) => firstImage.sortOrder - secondImage.sortOrder)
   return sorted[0]?.url ?? ''
 })
 
@@ -99,15 +99,15 @@ function handleTouchEnd(event: TouchEvent) {
   all: unset;
   cursor: pointer;
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   z-index: 1101;
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 32px;
   color: #fff;
   background: rgb(255 255 255 / 0.12);
   border-radius: 50%;
@@ -209,11 +209,11 @@ function handleTouchEnd(event: TouchEvent) {
 
 @media (max-width: 600px) {
   .works-fullscreen__close {
-    top: 12px;
-    right: 12px;
-    width: 44px;
-    height: 44px;
-    font-size: 22px;
+    top: 8px;
+    right: 8px;
+    width: 72px;
+    height: 72px;
+    font-size: 36px;
   }
 
   .works-fullscreen__arrow {
