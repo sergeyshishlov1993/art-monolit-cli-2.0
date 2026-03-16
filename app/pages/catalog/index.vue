@@ -11,6 +11,7 @@ useSeoMeta({
 })
 
 const route = useRoute()
+const router = useRouter()
 
 const search = ref('')
 const materialSlug = ref('')
@@ -48,12 +49,23 @@ watch(() => route.query, () => {
   applyQueryParams()
 }, { deep: true })
 
+watch([search, materialSlug, badge, targetGroupSlug], () => {
+  const query: Record<string, string> = {}
+  if (search.value) query.search = search.value
+  if (materialSlug.value) query.material = materialSlug.value
+  if (badge.value === 'SALE') query.sale = ''
+  if (badge.value === 'NEW') query.new = ''
+  if (badge.value === 'HIT') query.hit = ''
+
+  router.push({ query })
+}, { deep: true })
+
 function resetFilters() {
   search.value = ''
   materialSlug.value = ''
   badge.value = ''
   targetGroupSlug.value = ''
-  navigateTo({ path: '/catalog', query: {} })
+  router.push({ path: '/catalog', query: {} })
 }
 </script>
 
