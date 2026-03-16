@@ -29,7 +29,7 @@ defineEmits<{
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(18, 18, 18, 0.95);
+  background: var(--surface);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   padding: 16px 24px;
