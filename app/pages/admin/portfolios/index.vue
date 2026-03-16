@@ -1,23 +1,107 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { usePortfolioStore } from '~/modules/portfolio/PortfolioStore'
 import { ROUTES } from '~/modules/common/constants/routes'
+import type { PortfolioWork } from '~/modules/portfolio/types'
 
 definePageMeta({ layout: 'admin' })
 
 const portfolioStore = usePortfolioStore()
+const categoryStore = useCategoryStore()
+
 const search = ref('')
+const selectedCategoryId = ref('')
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
-const filtered = computed(() => portfolioStore.filteredBySearch(search.value))
+let intersectionObserver: IntersectionObserver | null = null
 
-const { pending } = await useAsyncData('admin-portfolio', () =>
-    portfolioStore.fetchAll({ all: true })
-)
+const categoryOptions = computed(() => [
+  { value: '', label: 'Всі категорії' },
+  ...categoryStore.categories.map(cat => ({ value: cat.id, label: cat.name })),
+])
 
-async function deleteWork(workId: string) {
+const filtered = computed<PortfolioWork[]>(() => {
+  const query = search.value.trim().toLowerCase()
+
+  return portfolioStore.works.filter((item: PortfolioWork) => {
+    const matchesCategory = selectedCategoryId.value
+        ? item.category.id === selectedCategoryId.value
+        : true
+
+    const matchesSearch = query
+        ? item.title.toLowerCase().includes(query)
+        : true
+
+    return matchesCategory && matchesSearch
+  })
+})
+
+const { pending } = await useAsyncData('admin-portfolio', async (): Promise<true> => {
+  await Promise.all([
+    categoryStore.categories.length ? Promise.resolve() : categoryStore.fetchAll(true),
+    portfolioStore.fetchAll({ all: true }),
+  ])
+  return true
+})
+
+async function deleteWork(workId: string): Promise<void> {
   await portfolioStore.remove(workId)
   await portfolioStore.fetchAll({ all: true })
 }
+
+async function loadMore(): Promise<void> {
+  if (portfolioStore.isLoading || !portfolioStore.hasMore) {
+    return
+  }
+
+  await portfolioStore.fetchMore({ all: true })
+}
+
+function setupIntersectionObserver(): void {
+  if (!loadMoreTrigger.value) {
+    return
+  }
+
+  intersectionObserver = new IntersectionObserver(
+      async (entries: IntersectionObserverEntry[]) => {
+        const targetEntry = entries[0]
+
+        if (!targetEntry?.isIntersecting) {
+          return
+        }
+
+        await loadMore()
+      },
+      {
+        root: null,
+        rootMargin: '300px 0px',
+        threshold: 0,
+      },
+  )
+
+  intersectionObserver.observe(loadMoreTrigger.value)
+}
+
+watch(loadMoreTrigger, () => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+    intersectionObserver = null
+  }
+
+  setupIntersectionObserver()
+})
+
+onMounted((): void => {
+  setupIntersectionObserver()
+})
+
+onBeforeUnmount((): void => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+    intersectionObserver = null
+  }
+})
 </script>
 
 <template>
@@ -31,6 +115,8 @@ async function deleteWork(workId: string) {
 
     <div class="admin-list__toolbar">
       <BInput v-model="search" placeholder="Пошук роботи..." />
+
+      <BSelect v-model="selectedCategoryId" :options="categoryOptions" />
     </div>
 
     <div class="admin-table-wrap">
@@ -39,7 +125,7 @@ async function deleteWork(workId: string) {
         <tr>
           <th>Назва</th>
           <th>Категорія</th>
-          <th>Матеріал</th>
+          <th>Матеріали</th>
           <th>Фото</th>
           <th>Статус</th>
           <th></th>
@@ -54,13 +140,13 @@ async function deleteWork(workId: string) {
         </tr>
         <tr v-for="item in filtered" :key="item.id">
           <td class="admin-table__bold">{{ item.title }}</td>
-          <td>{{ item.category || '—' }}</td>
-          <td>{{ item.material || '—' }}</td>
+          <td>{{ item.category?.name || '—' }}</td>
+          <td>{{ item.materials?.map(material => material.name).join(', ') || '—' }}</td>
           <td>{{ item._count?.images || item.images?.length || 0 }}</td>
           <td>
-            <span class="admin-badge" :class="item.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
-              {{ item.isActive ? 'Активний' : 'Вимкнений' }}
-            </span>
+              <span class="admin-badge" :class="item.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
+                {{ item.isActive ? 'Активний' : 'Вимкнений' }}
+              </span>
           </td>
           <td class="admin-table__actions">
             <NuxtLink :to="ROUTES.ADMIN.PORTFOLIO_EDIT(item.id)" class="admin-action">
@@ -93,11 +179,11 @@ async function deleteWork(workId: string) {
           <div class="admin-card__body">
             <div class="admin-card__row">
               <span class="admin-card__label">Категорія</span>
-              <span class="admin-card__value">{{ item.category || '—' }}</span>
+              <span class="admin-card__value">{{ item.category?.name || '—' }}</span>
             </div>
             <div class="admin-card__row">
-              <span class="admin-card__label">Матеріал</span>
-              <span class="admin-card__value">{{ item.material || '—' }}</span>
+              <span class="admin-card__label">Матеріали</span>
+              <span class="admin-card__value">{{ item.materials?.map(material => material.name).join(', ') || '—' }}</span>
             </div>
             <div class="admin-card__row">
               <span class="admin-card__label">Фото</span>
@@ -114,6 +200,12 @@ async function deleteWork(workId: string) {
           </button>
         </div>
       </div>
+    </div>
+
+    <div ref="loadMoreTrigger" class="admin-list__load-more-trigger" />
+
+    <div v-if="portfolioStore.isLoading && !pending" class="admin-list__loading-more">
+      Завантаження...
     </div>
   </div>
 </template>
@@ -135,8 +227,10 @@ async function deleteWork(workId: string) {
 }
 
 .admin-list__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 240px);
+  gap: 12px;
   margin-bottom: 16px;
-  max-width: 320px;
 }
 
 .admin-action--delete {
@@ -156,13 +250,25 @@ async function deleteWork(workId: string) {
   display: none;
 }
 
+.admin-list__load-more-trigger {
+  width: 100%;
+  height: 1px;
+}
+
+.admin-list__loading-more {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
   .admin-list__title {
     font-size: 20px;
   }
 
   .admin-list__toolbar {
-    max-width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .admin-table-wrap {
@@ -221,6 +327,7 @@ async function deleteWork(workId: string) {
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
+    gap: 12px;
   }
 
   .admin-card__label {
@@ -230,6 +337,7 @@ async function deleteWork(workId: string) {
   .admin-card__value {
     color: var(--text-primary);
     font-weight: 500;
+    text-align: right;
   }
 
   .admin-card__footer {

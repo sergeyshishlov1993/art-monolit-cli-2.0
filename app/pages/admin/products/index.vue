@@ -1,22 +1,106 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useProductStore } from '~/modules/product/ProductStore'
+import type { Product } from '~/modules/product/types'
 
 definePageMeta({ layout: 'admin' })
 
 const productStore = useProductStore()
+const categoryStore = useCategoryStore()
+
 const search = ref('')
+const selectedCategoryId = ref('')
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
-const filteredProducts = computed(() => productStore.filteredBySearch(search.value))
+let intersectionObserver: IntersectionObserver | null = null
 
-const { pending } = await useAsyncData('admin-products', () =>
-    productStore.fetchAll({ all: true })
-)
+const categoryOptions = computed(() => [
+  { value: '', label: 'Всі категорії' },
+  ...categoryStore.categories.map(cat => ({ value: cat.id, label: cat.name })),
+])
 
-async function deleteProduct(productId: string) {
+const filteredProducts = computed<Product[]>(() => {
+  const query = search.value.trim().toLowerCase()
+
+  return productStore.products.filter((product: Product) => {
+    const matchesCategory = selectedCategoryId.value
+        ? product.categoryId === selectedCategoryId.value
+        : true
+
+    const matchesSearch = query
+        ? product.title.toLowerCase().includes(query)
+        : true
+
+    return matchesCategory && matchesSearch
+  })
+})
+
+const { pending } = await useAsyncData('admin-products', async (): Promise<true> => {
+  await Promise.all([
+    categoryStore.categories.length ? Promise.resolve() : categoryStore.fetchAll(true),
+    productStore.fetchAll({ all: true }),
+  ])
+  return true
+})
+
+async function deleteProduct(productId: string): Promise<void> {
   await productStore.remove(productId)
   await productStore.fetchAll({ all: true })
 }
+
+async function loadMore(): Promise<void> {
+  if (productStore.isLoading || !productStore.hasMore) {
+    return
+  }
+
+  await productStore.fetchMore({ all: true })
+}
+
+function setupIntersectionObserver(): void {
+  if (!loadMoreTrigger.value) {
+    return
+  }
+
+  intersectionObserver = new IntersectionObserver(
+      async (entries: IntersectionObserverEntry[]) => {
+        const targetEntry = entries[0]
+
+        if (!targetEntry?.isIntersecting) {
+          return
+        }
+
+        await loadMore()
+      },
+      {
+        root: null,
+        rootMargin: '300px 0px',
+        threshold: 0,
+      },
+  )
+
+  intersectionObserver.observe(loadMoreTrigger.value)
+}
+
+watch(loadMoreTrigger, () => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+    intersectionObserver = null
+  }
+
+  setupIntersectionObserver()
+})
+
+onMounted(() => {
+  setupIntersectionObserver()
+})
+
+onBeforeUnmount(() => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+    intersectionObserver = null
+  }
+})
 </script>
 
 <template>
@@ -30,6 +114,8 @@ async function deleteProduct(productId: string) {
 
     <div class="admin-list__toolbar">
       <BInput v-model="search" placeholder="Пошук товару..." />
+
+      <BSelect v-model="selectedCategoryId" :options="categoryOptions" />
     </div>
 
     <div class="admin-table-wrap">
@@ -57,9 +143,9 @@ async function deleteProduct(productId: string) {
           <td>{{ product._count?.variants || product.variants?.length || 0 }}</td>
           <td>{{ product._count?.images || product.images?.length || 0 }}</td>
           <td>
-            <span class="admin-badge" :class="product.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
-              {{ product.isActive ? 'Активний' : 'Вимкнений' }}
-            </span>
+              <span class="admin-badge" :class="product.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
+                {{ product.isActive ? 'Активний' : 'Вимкнений' }}
+              </span>
           </td>
           <td class="admin-table__actions">
             <NuxtLink :to="`/admin/products/${product.id}`" class="admin-action">
@@ -114,6 +200,12 @@ async function deleteProduct(productId: string) {
         </div>
       </div>
     </div>
+
+    <div ref="loadMoreTrigger" class="admin-list__load-more-trigger" />
+
+    <div v-if="productStore.isLoading && !pending" class="admin-list__loading-more">
+      Завантаження...
+    </div>
   </div>
 </template>
 
@@ -134,8 +226,10 @@ async function deleteProduct(productId: string) {
 }
 
 .admin-list__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 240px);
+  gap: 12px;
   margin-bottom: 16px;
-  max-width: 320px;
 }
 
 .admin-action--delete {
@@ -155,13 +249,25 @@ async function deleteProduct(productId: string) {
   display: none;
 }
 
+.admin-list__load-more-trigger {
+  width: 100%;
+  height: 1px;
+}
+
+.admin-list__loading-more {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
   .admin-list__title {
     font-size: 20px;
   }
 
   .admin-list__toolbar {
-    max-width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .admin-table-wrap {

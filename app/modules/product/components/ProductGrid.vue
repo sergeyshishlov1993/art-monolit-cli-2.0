@@ -15,18 +15,32 @@ const currentPage = ref(1)
 const hasMore = ref(true)
 const isFetching = ref(false)
 const totalCount = ref(0)
+const isInitialLoad = ref(true)
+const isFilterChanging = ref(false)
 const limit = 12
 
-async function fetchProducts(reset = false) {
+function buildRequestFilters(page: number): ProductFilters {
+  return {
+    categoryId: props.filters.categoryId || undefined,
+    material: props.filters.material || undefined,
+    badge: props.filters.badge || undefined,
+    targetGroup: props.filters.targetGroup || undefined,
+    search: props.filters.search || undefined,
+    page,
+    limit,
+  }
+}
+
+async function fetchProducts(reset = false): Promise<void> {
   if (isFetching.value) return
 
   if (reset) {
     currentPage.value = 1
     hasMore.value = true
-    products.value = []
   }
 
   if (!hasMore.value) return
+
   isFetching.value = true
 
   if (reset) {
@@ -36,15 +50,7 @@ async function fetchProducts(reset = false) {
   }
 
   try {
-    const response = await productApi.getAll({
-      categoryId: props.filters.categoryId || undefined,
-      material: props.filters.material || undefined,
-      badge: props.filters.badge || undefined,
-      targetGroup: props.filters.targetGroup || undefined,
-      search: props.filters.search || undefined,
-      page: currentPage.value,
-      limit,
-    })
+    const response = await productApi.getAll(buildRequestFilters(currentPage.value))
 
     if (reset) {
       products.value = response.items
@@ -54,34 +60,50 @@ async function fetchProducts(reset = false) {
 
     hasMore.value = response.hasMore
     totalCount.value = response.total
-    currentPage.value++
+    currentPage.value = response.page + 1
+    isInitialLoad.value = false
   } finally {
     isLoading.value = false
     isLoadingMore.value = false
     isFetching.value = false
+    isFilterChanging.value = false
   }
 }
 
-const { data: initialData } = await useAsyncData('catalog-products', () =>
-    productApi.getAll({ page: 1, limit })
+const asyncDataKey = computed(() => [
+  'catalog-products',
+  props.filters.categoryId || '',
+  props.filters.material || '',
+  props.filters.badge || '',
+  props.filters.targetGroup || '',
+  props.filters.search || '',
+].join(':'))
+
+const { data: initialData } = await useAsyncData(
+    asyncDataKey,
+    () => productApi.getAll(buildRequestFilters(1)),
 )
 
 if (initialData.value) {
   products.value = initialData.value.items
   hasMore.value = initialData.value.hasMore
   totalCount.value = initialData.value.total
-  currentPage.value = 2
+  currentPage.value = initialData.value.page + 1
+  isInitialLoad.value = false
 }
 
 watch(
     () => props.filters,
-    () => fetchProducts(true),
+    async () => {
+      isFilterChanging.value = true
+      await fetchProducts(true)
+    },
     { deep: true },
 )
 
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 
-function onScroll() {
+function onScroll(): void {
   if (!loadMoreTrigger.value) return
   if (!hasMore.value) return
   if (isFetching.value) return
@@ -89,7 +111,7 @@ function onScroll() {
   const rect = loadMoreTrigger.value.getBoundingClientRect()
 
   if (rect.top <= window.innerHeight + 300) {
-    fetchProducts()
+    void fetchProducts()
   }
 }
 
@@ -102,7 +124,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
 })
 
-function getBadgeLabel(badges: string[]) {
+function getBadgeLabel(badges: string[]): string {
   if (badges.includes('SALE')) return 'Акція'
   if (badges.includes('NEW')) return 'Новинка'
   if (badges.includes('HIT')) return 'Хіт'
@@ -119,13 +141,13 @@ const inquiryOpen = ref(false)
 const inquiryProductTitle = ref('')
 const inquiryProductId = ref('')
 
-function openInquiry(product: Product) {
+function openInquiry(product: Product): void {
   inquiryProductTitle.value = product.title
   inquiryProductId.value = product.id
   inquiryOpen.value = true
 }
 
-function closeInquiry() {
+function closeInquiry(): void {
   inquiryOpen.value = false
 }
 </script>
@@ -136,7 +158,7 @@ function closeInquiry() {
       <span class="catalog-grid__count">{{ totalCount }} виробів</span>
     </div>
 
-    <div v-if="isLoading" class="catalog-grid__empty">
+    <div v-if="!products.length && isInitialLoad" class="catalog-grid__empty">
       Завантаження...
     </div>
 
@@ -144,17 +166,19 @@ function closeInquiry() {
       Нічого не знайдено
     </div>
 
-    <div v-else class="catalog-grid__items">
-      <BProductCard
-          v-for="product in products"
-          :key="product.id"
-          :image="getMainImage(product)"
-          :title="product.title"
-          :slug="product.slug"
-          :category="product.category.slug"
-          :badge="getBadgeLabel(product.badges)"
-          @inquiry="openInquiry(product)"
-      />
+    <div v-else class="catalog-grid__content" :class="{ 'catalog-grid__content--loading': isFilterChanging }">
+      <div class="catalog-grid__items">
+        <BProductCard
+            v-for="product in products"
+            :key="product.id"
+            :image="getMainImage(product)"
+            :title="product.title"
+            :slug="product.slug"
+            :category="product.category.slug"
+            :badge="getBadgeLabel(product.badges)"
+            @inquiry="openInquiry(product)"
+        />
+      </div>
     </div>
 
     <div v-if="hasMore && products.length > 0" ref="loadMoreTrigger" class="catalog-grid__trigger">
@@ -185,6 +209,7 @@ function closeInquiry() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 20px;
 }
 
 .catalog-grid__count {
@@ -192,15 +217,34 @@ function closeInquiry() {
   color: var(--text-muted);
 }
 
+.catalog-grid__content {
+  position: relative;
+}
+
+.catalog-grid__content--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .catalog-grid__items {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  align-content: start;
+  min-height: 520px;
 }
 
 .catalog-grid__empty {
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 60px 0;
   font-size: 15px;
   color: var(--text-muted);
 }
@@ -219,12 +263,22 @@ function closeInquiry() {
 @media (max-width: 1024px) {
   .catalog-grid__items {
     grid-template-columns: repeat(2, 1fr);
+    min-height: 420px;
+  }
+
+  .catalog-grid__empty {
+    min-height: 420px;
   }
 }
 
 @media (max-width: 480px) {
   .catalog-grid__items {
     grid-template-columns: 1fr;
+    min-height: 320px;
+  }
+
+  .catalog-grid__empty {
+    min-height: 320px;
   }
 }
 </style>

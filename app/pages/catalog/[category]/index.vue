@@ -12,10 +12,14 @@ const categoryStore = useCategoryStore()
 
 const categorySlug = computed(() => String(route.params.category || ''))
 
-await useAsyncData(`category-${categorySlug.value}`, async () => {
-  if (!categoryStore.categories.length) await categoryStore.fetchAll()
-  return true
-})
+await useAsyncData(
+    'categories-load',
+    async () => {
+      if (!categoryStore.categories.length) {
+        await categoryStore.fetchAll()
+      }
+    },
+)
 
 const currentCategory = computed(() =>
     categoryStore.categories.find(cat => cat.slug === categorySlug.value)
