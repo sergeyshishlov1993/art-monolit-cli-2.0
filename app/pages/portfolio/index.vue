@@ -46,7 +46,6 @@ function resetFilters() {
 
     <div class="catalog-page__body">
       <WorksSidebar
-          v-model:search="filters.search"
           v-model:category="filters.category"
           v-model:material="filters.material"
           v-model:sort="filters.sort"

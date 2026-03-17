@@ -4,14 +4,12 @@ import { usePortfolioStore } from '~/modules/portfolio/PortfolioStore'
 import type { CatalogCategory, CatalogMaterial, CatalogTargetGroup } from '~/modules/portfolio/types'
 
 const props = defineProps<{
-  search: string
   category: string
   material: string
   targetGroup: string
 }>()
 
 const emit = defineEmits<{
-  'update:search': [value: string]
   'update:category': [value: string]
   'update:material': [value: string]
   'update:targetGroup': [value: string]

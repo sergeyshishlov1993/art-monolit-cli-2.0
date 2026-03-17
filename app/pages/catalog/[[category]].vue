@@ -134,7 +134,6 @@ function resetFilters() {
 
     <div class="catalog-page__body">
       <ProductSidebar
-          v-model:search="search"
           v-model:material-slug="materialSlug"
           v-model:badge="badge"
           v-model:target-group-slug="targetGroupSlug"

@@ -5,7 +5,6 @@ import { useMaterialStore } from '~/modules/material/MaterialStore'
 import { useProductStore } from '~/modules/product/ProductStore'
 
 const props = defineProps<{
-  search: string
   categorySlug: string
   materialSlug: string
   badge: string
@@ -13,7 +12,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:search': [value: string]
   'update:categorySlug': [value: string]
   'update:materialSlug': [value: string]
   'update:badge': [value: string]
@@ -74,7 +72,6 @@ const activeFiltersCount = computed(() => {
   if (props.categorySlug) count++
   if (props.materialSlug) count++
   if (props.badge) count++
-  if (props.search) count++
   return count
 })
 
@@ -125,15 +122,6 @@ function applyFilters() {
     </div>
 
     <div class="sidebar__body" :class="{ 'sidebar__body--open': isMobileOpen }">
-      <div class="sidebar__section">
-        <span class="sidebar__label">Пошук</span>
-        <BInput
-            :model-value="search"
-            placeholder="Назва виробу..."
-            @update:model-value="emit('update:search', $event)"
-        />
-      </div>
-
       <div v-if="visibleCategories.length" class="sidebar__section">
         <span class="sidebar__label">Категорія</span>
         <div class="sidebar__options">
