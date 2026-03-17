@@ -1,49 +1,61 @@
-import type { LeadStatus, LeadSource } from './constants'
+export type LeadStatus = 'NEW' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
 
-export interface CreateLeadPayload {
-    name: string
-    phone: string
-    email?: string
-    message?: string
-    productId?: string
-    source?: LeadSource
-    pixel?: string
+export type LeadProductCategory = {
+    slug: string
 }
 
-export interface UpdateLeadPayload {
-    name?: string
-    phone?: string
-    email?: string | null
-    message?: string | null
-    status?: LeadStatus
-    adminComment?: string
-}
-
-export interface LeadProduct {
+export type LeadProduct = {
     id: string
     title: string
     slug: string
-    category: { slug: string } | null
+    category: LeadProductCategory
 }
 
-export interface LeadResponse {
+export type LeadResponse = {
     id: string
-    number: number
     name: string
     phone: string
     email: string | null
     message: string | null
-    productId: string | null
-    status: LeadStatus
-    source: LeadSource
+    source: string
     pixel: string | null
-    adminComment: string | null
+    status: LeadStatus
+    adminComment?: string | null
     createdAt: string
     updatedAt: string
     product: LeadProduct | null
 }
 
-export interface LeadFilters {
-    status?: LeadStatus | ''
-    source?: LeadSource | ''
+export type CreateLeadPayload = {
+    name: string
+    phone: string
+    email?: string | null
+    message?: string | null
+    source?: string
+    pixel?: string | null
+    productId?: string | null
+}
+
+export type UpdateLeadPayload = {
+    name?: string
+    phone?: string
+    email?: string | null
+    message?: string | null
+    status?: LeadStatus
+    adminComment?: string | null
+}
+
+export type LeadFilters = {
+    status?: string
+    source?: string
+    page?: number
+    limit?: number
+}
+
+export type LeadsListResponse = {
+    items: LeadResponse[]
+    total: number
+    page: number
+    limit: number
+    totalPages: number
 }
