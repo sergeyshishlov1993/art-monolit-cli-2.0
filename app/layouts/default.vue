@@ -45,8 +45,6 @@ const footerContacts = [
   { icon: 'phone' as const, text: '+380 (99) 123-45-67', href: 'tel:+380991234567' },
   { icon: 'email' as const, text: 'info@artmonolit.ua', href: 'mailto:info@artmonolit.ua' },
 ]
-
-const route = useRoute()
 </script>
 
 <template>
@@ -62,11 +60,7 @@ const route = useRoute()
     </TheHeader>
 
     <main class="app-main">
-      <Transition name="page-content" mode="out-in">
-        <div :key="route.path" class="page-wrapper">
-          <slot />
-        </div>
-      </Transition>
+      <slot />
     </main>
 
     <TheFooter
@@ -88,24 +82,5 @@ const route = useRoute()
 
 .app-main {
   flex: 1;
-  position: relative;
-}
-
-.page-wrapper {
-  width: 100%;
-}
-
-.page-content-enter-active {
-  transition: opacity 0.35s ease-out;
-}
-
-.page-content-leave-active {
-  transition: none;
-  position: absolute;
-  opacity: 0;
-}
-
-.page-content-enter-from {
-  opacity: 0.5;
 }
 </style>

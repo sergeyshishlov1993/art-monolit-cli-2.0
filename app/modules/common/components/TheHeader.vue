@@ -23,23 +23,27 @@ const route = useRoute()
 const isMobileOpen = ref(false)
 const openDropdown = ref<string | null>(null)
 
-function isActive(item: NavItem): boolean {
-  const currentPath = route.path
+const activeStates = computed(() => {
+  const path = route.path
+  return props.nav.map((item) => {
+    if (path === item.to) return true
+    if (item.children?.some(child => path === child.to || path.startsWith(child.to + '/'))) return true
+    if (item.to !== '/' && path.startsWith(item.to)) return true
+    return false
+  })
+})
 
-  if (currentPath === item.to) return true
-
-  if (item.children) {
-    return item.children.some(child => currentPath.startsWith(child.to))
+const childActiveStates = computed(() => {
+  const path = route.path
+  const map: Record<string, boolean> = {}
+  for (const item of props.nav) {
+    if (!item.children) continue
+    for (const child of item.children) {
+      map[child.to] = path === child.to || path.startsWith(child.to + '/')
+    }
   }
-
-  if (item.to !== '/' && currentPath.startsWith(item.to)) return true
-
-  return false
-}
-
-function isChildActive(to: string): boolean {
-  return route.path === to || route.path.startsWith(to + '/')
-}
+  return map
+})
 
 function toggleDropdown(label: string) {
   openDropdown.value = openDropdown.value === label ? null : label
@@ -55,12 +59,12 @@ function toggleDropdown(label: string) {
       </NuxtLink>
 
       <nav class="header__nav">
-        <template v-for="item in props.nav" :key="item.label">
+        <template v-for="(item, index) in props.nav" :key="item.label">
           <div v-if="item.children" class="header__dropdown">
             <button
                 type="button"
                 class="header__link"
-                :class="{ 'header__link--active': isActive(item) }"
+                :class="{ 'header__link--active': activeStates[index] }"
                 @click="toggleDropdown(item.label)"
             >
               {{ item.label }}
@@ -75,7 +79,7 @@ function toggleDropdown(label: string) {
                     :key="child.to"
                     :to="child.to"
                     class="header__dropdown-item"
-                    :class="{ 'header__dropdown-item--active': isChildActive(child.to) }"
+                    :class="{ 'header__dropdown-item--active': childActiveStates[child.to] }"
                     @click="openDropdown = null"
                 >
                   {{ child.label }}
@@ -88,7 +92,7 @@ function toggleDropdown(label: string) {
               v-else
               :to="item.to"
               class="header__link"
-              :class="{ 'header__link--active': isActive(item) }"
+              :class="{ 'header__link--active': activeStates[index] }"
           >
             {{ item.label }}
           </NuxtLink>
@@ -122,11 +126,11 @@ function toggleDropdown(label: string) {
 
     <Transition name="mobile-menu">
       <div v-if="isMobileOpen" class="header__mobile">
-        <template v-for="item in props.nav" :key="item.label">
+        <template v-for="(item, index) in props.nav" :key="item.label">
           <NuxtLink
               :to="item.to"
               class="header__mobile-link"
-              :class="{ 'header__mobile-link--active': isActive(item) }"
+              :class="{ 'header__mobile-link--active': activeStates[index] }"
               @click="isMobileOpen = false"
           >
             {{ item.label }}
@@ -138,7 +142,7 @@ function toggleDropdown(label: string) {
                 :key="child.to"
                 :to="child.to"
                 class="header__mobile-link header__mobile-link--sub"
-                :class="{ 'header__mobile-link--active': isChildActive(child.to) }"
+                :class="{ 'header__mobile-link--active': childActiveStates[child.to] }"
                 @click="isMobileOpen = false"
             >
               {{ child.label }}

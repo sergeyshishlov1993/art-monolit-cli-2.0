@@ -20,6 +20,7 @@ const portfolioApi = usePortfolioApi()
 
 const works = ref<PortfolioWork[]>([])
 const isLoading = ref(false)
+const isRefreshing = ref(false)
 const isLoadingMore = ref(false)
 const currentPage = ref(1)
 const hasMore = ref(true)
@@ -29,17 +30,18 @@ const limit = 12
 async function fetchWorks(reset = false) {
   if (isFetching.value) return
 
-  if (reset) {
-    currentPage.value = 1
-    hasMore.value = true
-    works.value = []
-  }
+  if (!reset && !hasMore.value) return
 
-  if (!hasMore.value) return
   isFetching.value = true
 
   if (reset) {
-    isLoading.value = true
+    if (works.value.length === 0) {
+      isLoading.value = true
+    } else {
+      isRefreshing.value = true
+    }
+    currentPage.value = 1
+    hasMore.value = true
   } else {
     isLoadingMore.value = true
   }
@@ -60,9 +62,10 @@ async function fetchWorks(reset = false) {
     }
 
     hasMore.value = response.hasMore
-    currentPage.value++
+    currentPage.value = reset ? 2 : currentPage.value + 1
   } finally {
     isLoading.value = false
+    isRefreshing.value = false
     isLoadingMore.value = false
     isFetching.value = false
   }
@@ -158,17 +161,27 @@ function handleLoadMore() {
     <div v-if="isLoading" class="works-grid__empty">
       Завантаження...
     </div>
-    <div v-else-if="!works.length" class="works-grid__empty">
-      Нічого не знайдено
-    </div>
-    <div v-else class="works-grid">
-      <WorksCard
-          v-for="(work, index) in works"
-          :key="work.id"
-          :work="work"
-          @click="openOverlay(index)"
-      />
-    </div>
+
+    <template v-else>
+      <div v-if="!works.length" class="works-grid__empty">
+        Нічого не знайдено
+      </div>
+
+      <div v-else class="works-grid-wrap__content">
+        <div class="works-grid" :class="{ 'works-grid--refreshing': isRefreshing }">
+          <WorksCard
+              v-for="(work, index) in works"
+              :key="work.id"
+              :work="work"
+              @click="openOverlay(index)"
+          />
+        </div>
+
+        <div v-if="isRefreshing" class="works-grid__refreshing">
+          Завантаження...
+        </div>
+      </div>
+    </template>
 
     <div v-if="hasMore && works.length > 0" ref="loadMoreTrigger" class="works-grid__trigger">
       <div v-if="isLoadingMore" class="works-grid__loading">
@@ -193,10 +206,31 @@ function handleLoadMore() {
 </template>
 
 <style scoped>
+.works-grid-wrap__content {
+  position: relative;
+}
+
 .works-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+.works-grid--refreshing {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+
+.works-grid__refreshing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--text-muted);
+  background: rgb(255 255 255 / 0.35);
+  backdrop-filter: blur(1px);
 }
 
 .works-grid__empty {

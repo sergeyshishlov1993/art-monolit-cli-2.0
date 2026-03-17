@@ -15,9 +15,13 @@ const currentPage = ref(1)
 const hasMore = ref(true)
 const isFetching = ref(false)
 const totalCount = ref(0)
-const isInitialLoad = ref(true)
 const isFilterChanging = ref(false)
 const limit = 12
+const skeletonCards = Array.from({ length: limit }, (_, index) => index)
+
+const contentRef = ref<HTMLElement | null>(null)
+const lockedHeight = ref<number | null>(null)
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 function buildRequestFilters(page: number): ProductFilters {
   return {
@@ -39,12 +43,19 @@ async function fetchProducts(reset = false): Promise<void> {
     hasMore.value = true
   }
 
-  if (!hasMore.value) return
+  if (!reset && !hasMore.value) return
 
   isFetching.value = true
 
   if (reset) {
-    isLoading.value = true
+    if (products.value.length === 0) {
+      isLoading.value = true
+    } else {
+      if (contentRef.value) {
+        lockedHeight.value = contentRef.value.offsetHeight
+      }
+      isFilterChanging.value = true
+    }
   } else {
     isLoadingMore.value = true
   }
@@ -61,47 +72,22 @@ async function fetchProducts(reset = false): Promise<void> {
     hasMore.value = response.hasMore
     totalCount.value = response.total
     currentPage.value = response.page + 1
-    isInitialLoad.value = false
   } finally {
     isLoading.value = false
     isLoadingMore.value = false
     isFetching.value = false
     isFilterChanging.value = false
+    lockedHeight.value = null
   }
-}
-
-const asyncDataKey = computed(() => [
-  'catalog-products',
-  props.filters.categoryId || '',
-  props.filters.material || '',
-  props.filters.badge || '',
-  props.filters.targetGroup || '',
-  props.filters.search || '',
-].join(':'))
-
-const { data: initialData } = await useAsyncData(
-    asyncDataKey,
-    () => productApi.getAll(buildRequestFilters(1)),
-)
-
-if (initialData.value) {
-  products.value = initialData.value.items
-  hasMore.value = initialData.value.hasMore
-  totalCount.value = initialData.value.total
-  currentPage.value = initialData.value.page + 1
-  isInitialLoad.value = false
 }
 
 watch(
     () => props.filters,
     async () => {
-      isFilterChanging.value = true
       await fetchProducts(true)
     },
-    { deep: true },
+    { deep: true, immediate: true },
 )
-
-const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 function onScroll(): void {
   if (!loadMoreTrigger.value) return
@@ -133,8 +119,8 @@ function getBadgeLabel(badges: string[]): string {
 
 function getMainImage(product: Product): string {
   if (!product.images.length) return ''
-  const main = product.images.find(img => img.isMain)
-  return main?.url || product.images[0]?.url || ''
+  const mainImage = product.images.find((image) => image.isMain)
+  return mainImage?.url || product.images[0]?.url || ''
 }
 
 const inquiryOpen = ref(false)
@@ -150,24 +136,43 @@ function openInquiry(product: Product): void {
 function closeInquiry(): void {
   inquiryOpen.value = false
 }
+
+const isInitialSkeleton = computed(() => isLoading.value && !products.length)
+const hasProducts = computed(() => products.value.length > 0)
+const showEmpty = computed(() => !hasProducts.value && !isLoading.value && !isFilterChanging.value)
+
+const contentStyle = computed(() => {
+  if (lockedHeight.value) {
+    return { minHeight: `${lockedHeight.value}px` }
+  }
+  return {}
+})
 </script>
 
 <template>
   <div class="catalog-grid">
     <div class="catalog-grid__info">
-      <span class="catalog-grid__count">{{ totalCount }} виробів</span>
+      <span v-if="isInitialSkeleton" class="catalog-grid__count-skeleton shimmer" />
+      <span v-else class="catalog-grid__count">{{ totalCount }} виробів</span>
     </div>
 
-    <div v-if="!products.length && isInitialLoad" class="catalog-grid__empty">
-      Завантаження...
-    </div>
+    <div ref="contentRef" class="catalog-grid__content" :style="contentStyle">
+      <div v-show="isInitialSkeleton" class="catalog-grid__items">
+        <div
+            v-for="cardIndex in skeletonCards"
+            :key="cardIndex"
+            class="catalog-grid__card-skeleton"
+        >
+          <div class="catalog-grid__card-image shimmer" />
+          <div class="catalog-grid__card-title shimmer" />
+        </div>
+      </div>
 
-    <div v-else-if="!products.length" class="catalog-grid__empty">
-      Нічого не знайдено
-    </div>
+      <div v-show="showEmpty" class="catalog-grid__empty">
+        Нічого не знайдено
+      </div>
 
-    <div v-else class="catalog-grid__content" :class="{ 'catalog-grid__content--loading': isFilterChanging }">
-      <div class="catalog-grid__items">
+      <div v-show="hasProducts && !isInitialSkeleton" class="catalog-grid__items" :class="{ 'catalog-grid__items--loading': isFilterChanging }">
         <BProductCard
             v-for="product in products"
             :key="product.id"
@@ -179,9 +184,24 @@ function closeInquiry(): void {
             @inquiry="openInquiry(product)"
         />
       </div>
+
+      <Transition name="catalog-fade">
+        <div v-if="isFilterChanging" class="catalog-grid__overlay">
+          <div class="catalog-grid__overlay-grid">
+            <div
+                v-for="cardIndex in skeletonCards"
+                :key="cardIndex"
+                class="catalog-grid__card-skeleton"
+            >
+              <div class="catalog-grid__card-image shimmer" />
+              <div class="catalog-grid__card-title shimmer" />
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
 
-    <div v-if="hasMore && products.length > 0" ref="loadMoreTrigger" class="catalog-grid__trigger">
+    <div v-if="hasMore && hasProducts" ref="loadMoreTrigger" class="catalog-grid__trigger">
       <div v-if="isLoadingMore" class="catalog-grid__loading">
         Завантаження...
       </div>
@@ -217,18 +237,17 @@ function closeInquiry(): void {
   color: var(--text-muted);
 }
 
-.catalog-grid__content {
-  position: relative;
+.catalog-grid__count-skeleton {
+  display: block;
+  width: 96px;
+  height: 16px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
 }
 
-.catalog-grid__content--loading::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(1.5px);
-  pointer-events: none;
-  z-index: 1;
+.catalog-grid__content {
+  position: relative;
+  min-height: 520px;
 }
 
 .catalog-grid__items {
@@ -236,7 +255,60 @@ function closeInquiry(): void {
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   align-content: start;
-  min-height: 520px;
+}
+
+.catalog-grid__items--loading {
+  opacity: 0.15;
+  pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+
+.catalog-grid__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.catalog-grid__overlay-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-content: start;
+}
+
+.catalog-fade-enter-active {
+  transition: opacity 0.15s ease-out;
+}
+
+.catalog-fade-leave-active {
+  transition: opacity 0.1s ease-in;
+}
+
+.catalog-fade-enter-from,
+.catalog-fade-leave-to {
+  opacity: 0;
+}
+
+.catalog-grid__card-skeleton {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+.catalog-grid__card-image {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--bg-secondary);
+}
+
+.catalog-grid__card-title {
+  height: 42px;
+  margin: 12px 16px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
 }
 
 .catalog-grid__empty {
@@ -260,9 +332,38 @@ function closeInquiry(): void {
   color: var(--text-muted);
 }
 
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 255 255 / 0.32) 50%,
+      transparent 100%
+  );
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @media (max-width: 1024px) {
-  .catalog-grid__items {
+  .catalog-grid__items,
+  .catalog-grid__overlay-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .catalog-grid__content {
     min-height: 420px;
   }
 
@@ -272,13 +373,17 @@ function closeInquiry(): void {
 }
 
 @media (max-width: 480px) {
-  .catalog-grid__items {
-    //grid-template-columns: 1fr;
+  .catalog-grid__content {
     min-height: 320px;
   }
 
   .catalog-grid__empty {
     min-height: 320px;
+  }
+
+  .catalog-grid__card-title {
+    margin: 8px 12px;
+    height: 36px;
   }
 }
 </style>
