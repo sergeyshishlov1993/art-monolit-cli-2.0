@@ -51,13 +51,9 @@ function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | nu
           <img
               v-if="getWorkImage(work)"
               :src="getWorkImage(work)!.url"
-              :alt="getWorkImage(work)!.alt || work.title"
+              :alt="getWorkImage(work)!.alt || 'image'"
               class="works__img"
           >
-          <div v-else class="works__img works__img--placeholder" />
-          <div class="works__item-overlay">
-            <span class="works__item-title">{{ work.title }}</span>
-          </div>
         </button>
       </div>
 
@@ -127,7 +123,7 @@ function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | nu
 .works__item {
   all: unset;
   position: relative;
-  aspect-ratio: 6/5;
+  aspect-ratio: 4 / 5;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -192,12 +188,6 @@ function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | nu
 
   .works__heading {
     font-size: 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .works__grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>
