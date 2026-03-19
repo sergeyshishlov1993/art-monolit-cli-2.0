@@ -172,9 +172,4 @@ const categoryStore = useCategoryStore()
   }
 }
 
-@media (max-width: 480px) {
-  .categories__grid {
-    grid-template-columns: 1fr;
-  }
-}
 </style>
