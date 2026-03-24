@@ -5,7 +5,7 @@ import ProductGallery from '~/modules/product/components/ProductGallery.vue'
 import ProductTabs from '~/modules/product/components/ProductTabs.vue'
 import ProductAdvantages from '~/modules/product/components/ProductAdvantages.vue'
 import ProductBottomCta from '~/modules/product/components/ProductBottomCta.vue'
-import ProductStickyBar from '~/modules/product/components/ ProductStickyBar.vue'
+import ProductStickyBar from '~/modules/product/components/ProductStickyBar.vue'
 
 
 definePageMeta({ layout: 'default' })

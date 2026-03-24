@@ -3,6 +3,7 @@ import { ROUTES } from '~/modules/common/constants/routes'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useMaterialStore } from '~/modules/material/MaterialStore'
 import { useProductStore } from '~/modules/product/ProductStore'
+import { useTargetGroupStore } from '~/modules/target-group/TargetGroupStore'
 
 const props = defineProps<{
   categorySlug: string
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const categoryStore = useCategoryStore()
 const materialStore = useMaterialStore()
 const productStore = useProductStore()
+const targetGroupStore = useTargetGroupStore()
 
 const badges = [
   { value: 'HIT', label: 'Хіт' },
@@ -35,6 +37,7 @@ await useAsyncData('catalog-filters', async () => {
   await Promise.all([
     categoryStore.categories.length ? null : categoryStore.fetchAll(),
     materialStore.materials.length ? null : materialStore.fetchAll(),
+    targetGroupStore.targetGroups.length ? null : targetGroupStore.fetchAll(),
   ])
   return true
 })
@@ -55,6 +58,10 @@ function getBadgeCount(badge: string): number {
   return productStore.counts?.badges.find(b => b.badge === badge)?.count ?? 0
 }
 
+function getTargetGroupCount(slug: string): number {
+  return productStore.counts?.targetGroups.find(tg => tg.slug === slug)?.count ?? 0
+}
+
 const visibleCategories = computed(() =>
     categoryStore.categories.filter(cat => getCategoryCount(cat.slug) > 0)
 )
@@ -67,11 +74,16 @@ const visibleBadges = computed(() =>
     badges.filter(item => getBadgeCount(item.value) > 0)
 )
 
+const visibleTargetGroups = computed(() =>
+    targetGroupStore.targetGroups.filter(tg => getTargetGroupCount(tg.slug) > 0)
+)
+
 const activeFiltersCount = computed(() => {
   let count = 0
   if (props.categorySlug) count++
   if (props.materialSlug) count++
   if (props.badge) count++
+  if (props.targetGroupSlug) count++
   return count
 })
 
@@ -142,6 +154,29 @@ function applyFilters() {
           >
             {{ cat.name }}
             <span class="sidebar__count">{{ getCategoryCount(cat.slug) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="visibleTargetGroups.length" class="sidebar__section">
+        <span class="sidebar__label">Призначення</span>
+        <div class="sidebar__options">
+          <button
+              class="sidebar__option"
+              :class="{ 'sidebar__option--active': !targetGroupSlug }"
+              @click="emit('update:targetGroupSlug', '')"
+          >
+            Усі призначення
+          </button>
+          <button
+              v-for="tg in visibleTargetGroups"
+              :key="tg.id"
+              class="sidebar__option"
+              :class="{ 'sidebar__option--active': targetGroupSlug === tg.slug }"
+              @click="emit('update:targetGroupSlug', tg.slug)"
+          >
+            {{ tg.name }}
+            <span class="sidebar__count">{{ getTargetGroupCount(tg.slug) }}</span>
           </button>
         </div>
       </div>
