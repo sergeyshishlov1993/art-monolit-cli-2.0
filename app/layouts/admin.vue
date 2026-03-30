@@ -237,7 +237,7 @@ watch(() => route.path, closeMobileMenu)
 
 .admin__nav-item--active .admin__nav-count {
   background: var(--gold);
-  color: #111;
+  color: white;
 }
 
 .admin__logout {
