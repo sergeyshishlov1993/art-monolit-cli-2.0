@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { usePortfolioStore } from '~/modules/portfolio/PortfolioStore'
 import { ROUTES } from '~/modules/common/constants/routes'
-import type { PortfolioWork } from '~/modules/portfolio/types'
+import type { PortfolioGetAllParams } from '~/modules/portfolio/PortfolioApi'
 
 definePageMeta({ layout: 'admin' })
 
@@ -15,62 +15,60 @@ const selectedCategoryId = ref('')
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 let intersectionObserver: IntersectionObserver | null = null
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const categoryOptions = computed(() => [
   { value: '', label: 'Всі категорії' },
   ...categoryStore.categories.map(cat => ({ value: cat.id, label: cat.name })),
 ])
 
-const filtered = computed<PortfolioWork[]>(() => {
-  const query = search.value.trim().toLowerCase()
+function buildFilters(): PortfolioGetAllParams {
+  const filters: PortfolioGetAllParams = { all: true }
+  if (selectedCategoryId.value) filters.categoryId = selectedCategoryId.value
+  return filters
+}
 
-  return portfolioStore.works.filter((item: PortfolioWork) => {
-    const matchesCategory = selectedCategoryId.value
-        ? item.category.id === selectedCategoryId.value
-        : true
-
-    const matchesSearch = query
-        ? item.title.toLowerCase().includes(query)
-        : true
-
-    return matchesCategory && matchesSearch
-  })
-})
+async function reload(): Promise<void> {
+  await portfolioStore.fetchAll(buildFilters())
+}
 
 const { pending } = await useAsyncData('admin-portfolio', async (): Promise<true> => {
   await Promise.all([
     categoryStore.categories.length ? Promise.resolve() : categoryStore.fetchAll(true),
-    portfolioStore.fetchAll({ all: true }),
+    portfolioStore.fetchAll(buildFilters()),
   ])
   return true
 })
 
+watch(selectedCategoryId, () => {
+  reload()
+})
+
+const filtered = computed(() => {
+  const query = search.value.trim().toLowerCase()
+  if (!query) return portfolioStore.works
+  return portfolioStore.works.filter(item =>
+      item.title.toLowerCase().includes(query),
+  )
+})
+
 async function deleteWork(workId: string): Promise<void> {
   await portfolioStore.remove(workId)
-  await portfolioStore.fetchAll({ all: true })
+  await reload()
 }
 
 async function loadMore(): Promise<void> {
-  if (portfolioStore.isLoading || !portfolioStore.hasMore) {
-    return
-  }
-
-  await portfolioStore.fetchMore({ all: true })
+  if (portfolioStore.isLoading || !portfolioStore.hasMore) return
+  await portfolioStore.fetchMore(buildFilters())
 }
 
 function setupIntersectionObserver(): void {
-  if (!loadMoreTrigger.value) {
-    return
-  }
+  if (!loadMoreTrigger.value) return
 
   intersectionObserver = new IntersectionObserver(
       async (entries: IntersectionObserverEntry[]) => {
         const targetEntry = entries[0]
-
-        if (!targetEntry?.isIntersecting) {
-          return
-        }
-
+        if (!targetEntry?.isIntersecting) return
         await loadMore()
       },
       {
@@ -88,15 +86,15 @@ watch(loadMoreTrigger, () => {
     intersectionObserver.disconnect()
     intersectionObserver = null
   }
-
   setupIntersectionObserver()
 })
 
-onMounted((): void => {
+onMounted(() => {
   setupIntersectionObserver()
 })
 
-onBeforeUnmount((): void => {
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout)
   if (intersectionObserver) {
     intersectionObserver.disconnect()
     intersectionObserver = null
@@ -115,7 +113,6 @@ onBeforeUnmount((): void => {
 
     <div class="admin-list__toolbar">
       <BInput v-model="search" placeholder="Пошук роботи..." />
-
       <BSelect v-model="selectedCategoryId" :options="categoryOptions" />
     </div>
 

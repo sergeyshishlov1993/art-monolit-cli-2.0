@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/modules/auth/AuthStore'
-import {ROUTES} from '~/modules/common/constants/routes'
+import { useAdminCounts } from '~/modules/admin/composables/useAdminCounts'
+import { ROUTES } from '~/modules/common/constants/routes'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { categories, products, portfolios, heroSlides, leads, fetchCounts } = useAdminCounts()
 
 authStore.init()
+fetchCounts()
 
-const navItems = [
+type NavItem = {
+  icon: string
+  label: string
+  to: string
+  count?: ComputedRef<number>
+}
+
+const navItems: NavItem[] = [
   { icon: 'chart-bar', label: 'Дашборд', to: '/admin' },
-  { icon: 'rectangle-group', label: 'Категорії', to: ROUTES.ADMIN.CATEGORIES },
-  { icon: 'cube', label: 'Товари', to: ROUTES.ADMIN.PRODUCTS },
-  { icon: 'photo', label: 'Роботи', to: ROUTES.ADMIN.PORTFOLIOS },
-  { icon: 'sparkles', label: 'Слайдер', to: ROUTES.ADMIN.HERO_SLIDES },
-  { icon: 'envelope', label: 'Заявки', to: ROUTES.ADMIN.LEADS },
+  { icon: 'rectangle-group', label: 'Категорії', to: ROUTES.ADMIN.CATEGORIES, count: categories },
+  { icon: 'cube', label: 'Товари', to: ROUTES.ADMIN.PRODUCTS, count: products },
+  { icon: 'photo', label: 'Роботи', to: ROUTES.ADMIN.PORTFOLIOS, count: portfolios },
+  { icon: 'sparkles', label: 'Слайдер', to: ROUTES.ADMIN.HERO_SLIDES, count: heroSlides },
+  { icon: 'envelope', label: 'Заявки', to: ROUTES.ADMIN.LEADS, count: leads },
 ]
 
 const isSidebarOpen = ref(true)
@@ -75,6 +85,12 @@ watch(() => route.path, closeMobileMenu)
         >
           <BIcon :name="item.icon" size="sm" />
           <span class="admin__nav-label">{{ item.label }}</span>
+          <span
+              v-if="item.count && item.count.value > 0"
+              class="admin__nav-count"
+          >
+                        {{ item.count.value }}
+                    </span>
         </NuxtLink>
       </nav>
 
@@ -154,6 +170,10 @@ watch(() => route.path, closeMobileMenu)
   display: none;
 }
 
+.admin--collapsed .admin__nav-count {
+  display: none;
+}
+
 .admin--collapsed .admin__logout-label {
   display: none;
 }
@@ -197,6 +217,26 @@ watch(() => route.path, closeMobileMenu)
 
 .admin__nav-item--active {
   background: rgba(255 255 255 / 0.1);
+  color: var(--gold);
+}
+
+.admin__nav-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255 255 255 / 0.1);
+  color: rgba(255 255 255 / 0.5);
+  padding: 0 6px;
+}
+
+.admin__nav-item--active .admin__nav-count {
+  background: rgba(var(--gold-rgb, 212 175 55) / 0.2);
   color: var(--gold);
 }
 

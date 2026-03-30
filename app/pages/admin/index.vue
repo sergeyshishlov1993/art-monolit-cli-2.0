@@ -1,17 +1,45 @@
 <script setup lang="ts">
+import { useAdminCounts } from '~/modules/admin/composables/useAdminCounts'
+import { useLeadStore } from '~/modules/lead/LeadStore'
+import type { LeadResponse } from '~/modules/lead/types'
+
 definePageMeta({ layout: 'admin' })
 
-const stats = ref([
-  { label: 'Товарів', value: '—', icon: 'cube' },
-  { label: 'Категорій', value: '—', icon: 'rectangle-group' },
-  { label: 'Робіт', value: '—', icon: 'photo' },
-  { label: 'Нових заявок', value: '—', icon: 'envelope', accent: true },
+const { categories, products, portfolios, leads: leadsCount, heroSlides } = useAdminCounts()
+const leadStore = useLeadStore()
+
+const recentLeads = ref<LeadResponse[]>([])
+
+const stats = computed(() => [
+  { label: 'Товарів', value: products.value, icon: 'cube' },
+  { label: 'Категорій', value: categories.value, icon: 'rectangle-group' },
+  { label: 'Робіт', value: portfolios.value, icon: 'photo' },
+  { label: 'Слайдів', value: heroSlides.value, icon: 'sparkles' },
+  { label: 'Нових заявок', value: leadsCount.value, icon: 'envelope', accent: true },
 ])
 
-const recentLeads = ref<{ id: string; name: string; phone: string; status: string; createdAt: string }[]>([])
+const statusMap: Record<string, string> = {
+  NEW: 'Нова',
+  IN_PROGRESS: 'В роботі',
+  DONE: 'Завершена',
+  CANCELED: 'Скасована',
+}
 
-onMounted(async () => {
-  // TODO: fetch from API
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('uk-UA', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+await useAsyncData('admin-dashboard', async (): Promise<null> => {
+  const response = await leadStore.fetchAll({ limit: 5, page: 1 })
+  recentLeads.value = response.items
+  return null
 })
 </script>
 
@@ -59,9 +87,20 @@ onMounted(async () => {
           <tbody>
           <tr v-for="lead in recentLeads" :key="lead.id">
             <td>{{ lead.name }}</td>
-            <td>{{ lead.phone }}</td>
-            <td>{{ lead.status }}</td>
-            <td>{{ lead.createdAt }}</td>
+            <td>
+              <a :href="`tel:${lead.phone}`" class="dashboard__phone">
+                {{ lead.phone }}
+              </a>
+            </td>
+            <td>
+                                <span
+                                    class="dashboard__status"
+                                    :class="`dashboard__status--${lead.status.toLowerCase()}`"
+                                >
+                                    {{ statusMap[lead.status] ?? lead.status }}
+                                </span>
+            </td>
+            <td class="dashboard__date">{{ formatDate(lead.createdAt) }}</td>
           </tr>
           </tbody>
         </table>
@@ -71,7 +110,12 @@ onMounted(async () => {
         <div v-for="lead in recentLeads" :key="lead.id" class="dashboard__lead-card">
           <div class="dashboard__lead-card-header">
             <span class="dashboard__lead-card-name">{{ lead.name }}</span>
-            <span class="dashboard__lead-card-status">{{ lead.status }}</span>
+            <span
+                class="dashboard__lead-card-status"
+                :class="`dashboard__status--${lead.status.toLowerCase()}`"
+            >
+                            {{ statusMap[lead.status] ?? lead.status }}
+                        </span>
           </div>
           <div class="dashboard__lead-card-body">
             <div class="dashboard__lead-card-row">
@@ -82,7 +126,9 @@ onMounted(async () => {
             </div>
             <div class="dashboard__lead-card-row">
               <span class="dashboard__lead-card-label">Дата</span>
-              <span class="dashboard__lead-card-value dashboard__lead-card-value--muted">{{ lead.createdAt }}</span>
+              <span class="dashboard__lead-card-value dashboard__lead-card-value--muted">
+                                {{ formatDate(lead.createdAt) }}
+                            </span>
             </div>
           </div>
         </div>
@@ -101,7 +147,7 @@ onMounted(async () => {
 
 .dashboard__stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -186,6 +232,10 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 
+.dashboard__table-wrap {
+  overflow-x: auto;
+}
+
 .dashboard__table {
   width: 100%;
   border-collapse: collapse;
@@ -209,8 +259,51 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border);
 }
 
+.dashboard__phone {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.dashboard__date {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dashboard__status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.dashboard__status--new {
+  background: rgba(59 130 246 / 0.15);
+  color: #60a5fa;
+}
+
+.dashboard__status--in_progress {
+  background: rgba(251 191 36 / 0.15);
+  color: #fbbf24;
+}
+
+.dashboard__status--done {
+  background: rgba(34 197 94 / 0.15);
+  color: #22c55e;
+}
+
+.dashboard__status--canceled {
+  background: rgba(239 68 68 / 0.15);
+  color: #ef4444;
+}
+
 .dashboard__leads-cards {
   display: none;
+}
+
+@media (max-width: 1024px) {
+  .dashboard__stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
@@ -280,8 +373,9 @@ onMounted(async () => {
 
   .dashboard__lead-card-status {
     font-size: 12px;
-    color: var(--text-muted);
     font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
   }
 
   .dashboard__lead-card-body {

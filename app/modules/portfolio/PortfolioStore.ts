@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { usePortfolioApi } from './PortfolioApi'
-import type { PortfolioWork, FilterCounts, PortfolioListResponse } from './types'
+import type { PortfolioWork, FilterCounts } from './types'
 import type { PortfolioGetAllParams } from './PortfolioApi'
 
 export const usePortfolioStore = defineStore('portfolio', () => {
@@ -11,6 +11,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     const isLoading = ref(false)
     const hasMore = ref(true)
     const currentPage = ref(1)
+    const totalCount = ref(0)
 
     async function fetchAll(params: PortfolioGetAllParams = {}) {
         isLoading.value = true
@@ -19,6 +20,21 @@ export const usePortfolioStore = defineStore('portfolio', () => {
             works.value = response.items
             hasMore.value = response.hasMore
             currentPage.value = response.page
+            totalCount.value = response.total
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    async function fetchMore(params: PortfolioGetAllParams = {}) {
+        if (isLoading.value || !hasMore.value) return
+        isLoading.value = true
+        try {
+            const response = await api.getAll({ ...params, page: currentPage.value + 1 })
+            works.value = [...works.value, ...response.items]
+            hasMore.value = response.hasMore
+            currentPage.value = response.page
+            totalCount.value = response.total
         } finally {
             isLoading.value = false
         }
@@ -71,7 +87,9 @@ export const usePortfolioStore = defineStore('portfolio', () => {
         isLoading,
         hasMore,
         currentPage,
+        totalCount,
         fetchAll,
+        fetchMore,
         fetchCounts,
         fetchById,
         filteredBySearch,
