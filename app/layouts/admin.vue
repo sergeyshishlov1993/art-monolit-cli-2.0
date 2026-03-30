@@ -224,20 +224,20 @@ watch(() => route.path, closeMobileMenu)
   margin-left: auto;
   font-size: 11px;
   font-weight: 600;
-  min-width: 20px;
-  height: 20px;
+  min-width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: rgba(255 255 255 / 0.1);
-  color: rgba(255 255 255 / 0.5);
-  padding: 0 6px;
+  border-radius: 11px;
+  background: rgba(255 255 255 / 0.08);
+  color: rgba(255 255 255 / 0.7);
+  padding: 0 7px;
 }
 
 .admin__nav-item--active .admin__nav-count {
-  background: rgba(var(--gold-rgb, 212 175 55) / 0.2);
-  color: var(--gold);
+  background: var(--gold);
+  color: #111;
 }
 
 .admin__logout {
