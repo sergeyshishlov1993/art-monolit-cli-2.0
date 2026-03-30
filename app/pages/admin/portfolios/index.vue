@@ -10,12 +10,10 @@ definePageMeta({ layout: 'admin' })
 const portfolioStore = usePortfolioStore()
 const categoryStore = useCategoryStore()
 
-const search = ref('')
 const selectedCategoryId = ref('')
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 let intersectionObserver: IntersectionObserver | null = null
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const categoryOptions = computed(() => [
   { value: '', label: 'Всі категорії' },
@@ -42,14 +40,6 @@ const { pending } = await useAsyncData('admin-portfolio', async (): Promise<true
 
 watch(selectedCategoryId, () => {
   reload()
-})
-
-const filtered = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return portfolioStore.works
-  return portfolioStore.works.filter(item =>
-      item.title.toLowerCase().includes(query),
-  )
 })
 
 async function deleteWork(workId: string): Promise<void> {
@@ -94,7 +84,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout)
   if (intersectionObserver) {
     intersectionObserver.disconnect()
     intersectionObserver = null
@@ -112,7 +101,6 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="admin-list__toolbar">
-      <BInput v-model="search" placeholder="Пошук роботи..." />
       <BSelect v-model="selectedCategoryId" :options="categoryOptions" />
     </div>
 
@@ -120,7 +108,6 @@ onBeforeUnmount(() => {
       <table class="admin-table">
         <thead>
         <tr>
-          <th>Назва</th>
           <th>Категорія</th>
           <th>Матеріали</th>
           <th>Фото</th>
@@ -130,20 +117,19 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
         <tr v-if="pending">
-          <td colspan="6" class="admin-table__empty">Завантаження...</td>
+          <td colspan="5" class="admin-table__empty">Завантаження...</td>
         </tr>
-        <tr v-else-if="!filtered.length">
-          <td colspan="6" class="admin-table__empty">Робіт немає</td>
+        <tr v-else-if="!portfolioStore.works.length">
+          <td colspan="5" class="admin-table__empty">Робіт немає</td>
         </tr>
-        <tr v-for="item in filtered" :key="item.id">
-          <td class="admin-table__bold">{{ item.title }}</td>
+        <tr v-for="item in portfolioStore.works" :key="item.id">
           <td>{{ item.category?.name || '—' }}</td>
           <td>{{ item.materials?.map(material => material.name).join(', ') || '—' }}</td>
           <td>{{ item._count?.images || item.images?.length || 0 }}</td>
           <td>
-              <span class="admin-badge" :class="item.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
-                {{ item.isActive ? 'Активний' : 'Вимкнений' }}
-              </span>
+                            <span class="admin-badge" :class="item.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
+                                {{ item.isActive ? 'Активний' : 'Вимкнений' }}
+                            </span>
           </td>
           <td class="admin-table__actions">
             <NuxtLink :to="ROUTES.ADMIN.PORTFOLIO_EDIT(item.id)" class="admin-action">
@@ -160,24 +146,20 @@ onBeforeUnmount(() => {
 
     <div class="admin-cards">
       <div v-if="pending" class="admin-cards__empty">Завантаження...</div>
-      <div v-else-if="!filtered.length" class="admin-cards__empty">Робіт немає</div>
+      <div v-else-if="!portfolioStore.works.length" class="admin-cards__empty">Робіт немає</div>
       <div
-          v-for="item in filtered"
+          v-for="item in portfolioStore.works"
           :key="item.id"
           class="admin-card"
       >
         <NuxtLink :to="ROUTES.ADMIN.PORTFOLIO_EDIT(item.id)" class="admin-card__link">
           <div class="admin-card__header">
-            <span class="admin-card__name">{{ item.title }}</span>
+            <span class="admin-card__name">{{ item.category?.name || '—' }}</span>
             <span class="admin-badge" :class="item.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
-              {{ item.isActive ? 'Активний' : 'Вимкнений' }}
-            </span>
+                            {{ item.isActive ? 'Активний' : 'Вимкнений' }}
+                        </span>
           </div>
           <div class="admin-card__body">
-            <div class="admin-card__row">
-              <span class="admin-card__label">Категорія</span>
-              <span class="admin-card__value">{{ item.category?.name || '—' }}</span>
-            </div>
             <div class="admin-card__row">
               <span class="admin-card__label">Матеріали</span>
               <span class="admin-card__value">{{ item.materials?.map(material => material.name).join(', ') || '—' }}</span>
@@ -225,7 +207,7 @@ onBeforeUnmount(() => {
 
 .admin-list__toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 320px) minmax(0, 240px);
+  grid-template-columns: minmax(0, 240px);
   gap: 12px;
   margin-bottom: 16px;
 }
