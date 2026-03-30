@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { useProductStore } from '~/modules/product/ProductStore'
-import type { Product } from '~/modules/product/types'
+import type { ProductFilters } from '~/modules/product/types'
 
 definePageMeta({ layout: 'admin' })
 
@@ -14,62 +14,60 @@ const selectedCategoryId = ref('')
 const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 let intersectionObserver: IntersectionObserver | null = null
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const categoryOptions = computed(() => [
   { value: '', label: 'Всі категорії' },
   ...categoryStore.categories.map(cat => ({ value: cat.id, label: cat.name })),
 ])
 
-const filteredProducts = computed<Product[]>(() => {
-  const query = search.value.trim().toLowerCase()
+function buildFilters(): ProductFilters {
+  const filters: ProductFilters = { all: true }
+  if (selectedCategoryId.value) filters.categoryId = selectedCategoryId.value
+  if (search.value.trim()) filters.search = search.value.trim()
+  return filters
+}
 
-  return productStore.products.filter((product: Product) => {
-    const matchesCategory = selectedCategoryId.value
-        ? product.categoryId === selectedCategoryId.value
-        : true
-
-    const matchesSearch = query
-        ? product.title.toLowerCase().includes(query)
-        : true
-
-    return matchesCategory && matchesSearch
-  })
-})
+async function reload(): Promise<void> {
+  await productStore.fetchAll(buildFilters())
+}
 
 const { pending } = await useAsyncData('admin-products', async (): Promise<true> => {
   await Promise.all([
     categoryStore.categories.length ? Promise.resolve() : categoryStore.fetchAll(true),
-    productStore.fetchAll({ all: true }),
+    productStore.fetchAll(buildFilters()),
   ])
   return true
 })
 
+watch(selectedCategoryId, () => {
+  reload()
+})
+
+watch(search, () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    reload()
+  }, 300)
+})
+
 async function deleteProduct(productId: string): Promise<void> {
   await productStore.remove(productId)
-  await productStore.fetchAll({ all: true })
+  await reload()
 }
 
 async function loadMore(): Promise<void> {
-  if (productStore.isLoading || !productStore.hasMore) {
-    return
-  }
-
-  await productStore.fetchMore({ all: true })
+  if (productStore.isLoading || !productStore.hasMore) return
+  await productStore.fetchMore(buildFilters())
 }
 
 function setupIntersectionObserver(): void {
-  if (!loadMoreTrigger.value) {
-    return
-  }
+  if (!loadMoreTrigger.value) return
 
   intersectionObserver = new IntersectionObserver(
       async (entries: IntersectionObserverEntry[]) => {
         const targetEntry = entries[0]
-
-        if (!targetEntry?.isIntersecting) {
-          return
-        }
-
+        if (!targetEntry?.isIntersecting) return
         await loadMore()
       },
       {
@@ -87,7 +85,6 @@ watch(loadMoreTrigger, () => {
     intersectionObserver.disconnect()
     intersectionObserver = null
   }
-
   setupIntersectionObserver()
 })
 
@@ -96,6 +93,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout)
   if (intersectionObserver) {
     intersectionObserver.disconnect()
     intersectionObserver = null
@@ -114,7 +112,6 @@ onBeforeUnmount(() => {
 
     <div class="admin-list__toolbar">
       <BInput v-model="search" placeholder="Пошук товару..." />
-
       <BSelect v-model="selectedCategoryId" :options="categoryOptions" />
     </div>
 
@@ -134,18 +131,18 @@ onBeforeUnmount(() => {
         <tr v-if="pending">
           <td colspan="6" class="admin-table__empty">Завантаження...</td>
         </tr>
-        <tr v-else-if="!filteredProducts.length">
+        <tr v-else-if="!productStore.products.length">
           <td colspan="6" class="admin-table__empty">Товарів немає</td>
         </tr>
-        <tr v-for="product in filteredProducts" :key="product.id">
+        <tr v-for="product in productStore.products" :key="product.id">
           <td class="admin-table__bold">{{ product.title }}</td>
           <td>{{ product.category?.name || '—' }}</td>
           <td>{{ product._count?.variants || product.variants?.length || 0 }}</td>
           <td>{{ product._count?.images || product.images?.length || 0 }}</td>
           <td>
-              <span class="admin-badge" :class="product.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
-                {{ product.isActive ? 'Активний' : 'Вимкнений' }}
-              </span>
+            <span class="admin-badge" :class="product.isActive ? 'admin-badge--green' : 'admin-badge--gray'">
+              {{ product.isActive ? 'Активний' : 'Вимкнений' }}
+            </span>
           </td>
           <td class="admin-table__actions">
             <NuxtLink :to="`/admin/products/${product.id}`" class="admin-action">
@@ -162,9 +159,9 @@ onBeforeUnmount(() => {
 
     <div class="admin-cards">
       <div v-if="pending" class="admin-cards__empty">Завантаження...</div>
-      <div v-else-if="!filteredProducts.length" class="admin-cards__empty">Товарів немає</div>
+      <div v-else-if="!productStore.products.length" class="admin-cards__empty">Товарів немає</div>
       <div
-          v-for="product in filteredProducts"
+          v-for="product in productStore.products"
           :key="product.id"
           class="admin-card"
       >
