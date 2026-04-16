@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { STATUS_OPTIONS, STATUS_LABELS, SOURCE_LABELS, type LeadStatus } from '~/modules/lead/constants'
+import { XMarkIcon, PencilIcon, PhoneIcon, TrashIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline'
 import { useLeadFormat } from '~/modules/lead/composables/useLeadFormat'
 import { useToast } from '~/modules/common/composables/useToast'
 import type { LeadResponse } from '~/modules/lead/types'
@@ -65,7 +66,7 @@ function cancelEdit() {
   isEditing.value = false
 }
 
-function buildPayload(): { name: string; phone: string; email: string | null; message: string | null; status: string; adminComment?: string } {
+function buildPayload() {
   return {
     name: editName.value,
     phone: editPhone.value,
@@ -76,13 +77,9 @@ function buildPayload(): { name: string; phone: string; email: string | null; me
   }
 }
 
-async function emitUpdate(): Promise<void> {
-  try {
-    emit('update', buildPayload())
-    toast.success('Збережено')
-  } catch {
-    toast.error('Помилка збереження')
-  }
+function emitUpdate() {
+  emit('update', buildPayload())
+  toast.success('Збережено')
 }
 
 function save() {
@@ -90,14 +87,14 @@ function save() {
   isEditing.value = false
 }
 
-async function setStatus(status: string): Promise<void> {
+function setStatus(status: string) {
   editStatus.value = status
-  await emitUpdate()
+  emitUpdate()
 }
 
-async function saveComment(): Promise<void> {
+function saveComment() {
   if (editComment.value === (props.lead?.adminComment || '')) return
-  await emitUpdate()
+  emitUpdate()
 }
 
 function confirmDelete() {
@@ -129,10 +126,10 @@ watch(() => props.modelValue, (isOpen) => {
             </div>
             <div class="drawer__header-actions">
               <button v-if="!isEditing" type="button" class="drawer__icon-btn" @click="startEdit">
-                <BIcon name="edit" size="sm" />
+                <PencilIcon class="drawer__icon drawer__icon--sm" />
               </button>
               <button type="button" class="drawer__icon-btn" @click="close">
-                <BIcon name="close" size="md" />
+                <XMarkIcon class="drawer__icon drawer__icon--md" />
               </button>
             </div>
           </div>
@@ -140,7 +137,7 @@ watch(() => props.modelValue, (isOpen) => {
           <div class="drawer__body">
             <div class="drawer__section">
               <button type="button" class="drawer__call" @click="callPhone">
-                <BIcon name="phone" size="sm" />
+                <PhoneIcon class="drawer__icon drawer__icon--sm" />
                 <span>{{ lead.phone }}</span>
               </button>
             </div>
@@ -175,7 +172,7 @@ watch(() => props.modelValue, (isOpen) => {
                       class="drawer__product-link"
                   >
                     {{ lead.product.title }}
-                    <BIcon name="external-link" size="xs" />
+                    <ArrowTopRightOnSquareIcon class="drawer__icon drawer__icon--xs" />
                   </a>
                   <template v-else>—</template>
                 </span>
@@ -229,16 +226,17 @@ watch(() => props.modelValue, (isOpen) => {
           </div>
 
           <div class="drawer__footer">
-            <div v-if="isEditing" class="drawer__footer-main">
-              <button type="button" class="drawer__cancel-btn" @click="cancelEdit">
-                Скасувати
-              </button>
-              <BButton class="drawer__save-btn" @click="save">Зберегти</BButton>
+            <div class="drawer__footer-main">
+              <template v-if="isEditing">
+                <button type="button" class="drawer__cancel-btn" @click="cancelEdit">
+                  Скасувати
+                </button>
+                <BButton class="drawer__save-btn" @click="save">Зберегти</BButton>
+              </template>
+              <template v-else>
+                <BButton block @click="save">Зберегти</BButton>
+              </template>
             </div>
-
-            <button type="button" class="drawer__close-btn" @click="close">
-              Закрити
-            </button>
 
             <button
                 v-if="!deleteConfirm"
@@ -246,7 +244,7 @@ watch(() => props.modelValue, (isOpen) => {
                 class="drawer__delete-btn"
                 @click="deleteConfirm = true"
             >
-              <BIcon name="trash" size="sm" />
+              <TrashIcon class="drawer__icon drawer__icon--sm" />
               Видалити заявку
             </button>
 
@@ -268,360 +266,426 @@ watch(() => props.modelValue, (isOpen) => {
   </Teleport>
 </template>
 
-<style scoped lang="scss">
+<style scoped>
 .drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--overlay);
+  z-index: 1000;
   display: flex;
   justify-content: flex-end;
 }
 
 .drawer {
-  width: 100%;
-  max-width: 420px;
+  width: 440px;
+  max-width: 100%;
   height: 100%;
-  background: var(--bg-primary);
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
 
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
-  }
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
 
-  &__header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
+.drawer__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 
-  &__header-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
+.drawer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 
-  &__number {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
+.drawer__number {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
 
-  &__name {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+.drawer__name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  &__icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: none;
-    border-radius: 6px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+.drawer__icon {
+  flex-shrink: 0;
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-    }
-  }
+.drawer__icon--xs {
+  width: 14px;
+  height: 14px;
+}
 
-  &__body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+.drawer__icon--sm {
+  width: 18px;
+  height: 18px;
+}
 
-  &__section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+.drawer__icon--md {
+  width: 22px;
+  height: 22px;
+}
 
-  &__section-title {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-secondary);
-    margin: 0;
-  }
+.drawer__icon-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
 
-  &__call {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: none;
-    color: var(--color-primary);
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s;
-    width: fit-content;
+.drawer__icon-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-    }
-  }
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
-  &__form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+.drawer__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  &__field {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
+.drawer__section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
 
-  &__label {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
+.drawer__call {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gold);
+  transition: background 0.15s;
+}
 
-  &__value {
-    font-size: 14px;
-    color: var(--text-primary);
-    word-break: break-word;
+.drawer__call:hover {
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+}
 
-    &--mono {
-      font-family: monospace;
-      font-size: 13px;
-    }
-  }
+.drawer__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  &__product-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--color-primary);
-    text-decoration: none;
+.drawer__field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
 
-    &:hover {
-      text-decoration: underline;
-    }
-  }
+.drawer__field:last-of-type {
+  border-bottom: none;
+}
 
-  &__status-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
+.drawer__label {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
 
-  &__status-btn {
-    padding: 6px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-primary);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--text-secondary);
+.drawer__value {
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-word;
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-    }
+.drawer__value--mono {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
-    &--active {
-      border-color: currentColor;
-      font-weight: 600;
-    }
+.drawer__product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gold);
+  text-decoration: none;
+  transition: color 0.15s;
+}
 
-    &--new {
-      color: var(--color-info);
+.drawer__product-link:hover {
+  color: var(--gold-hover);
+  text-decoration: underline;
+}
 
-      &.drawer__status-btn--active {
-        background: var(--color-info-bg, rgba(59, 130, 246, 0.08));
-      }
-    }
+.drawer__status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 
-    &--processing {
-      color: var(--color-warning);
+.drawer__status-btn {
+  all: unset;
+  cursor: pointer;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
 
-      &.drawer__status-btn--active {
-        background: var(--color-warning-bg, rgba(245, 158, 11, 0.08));
-      }
-    }
+.drawer__status-btn--blue {
+  background: rgba(59, 130, 246, 0.06);
+  color: #3b82f6;
+}
 
-    &--done {
-      color: var(--color-success);
+.drawer__status-btn--blue.drawer__status-btn--active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
 
-      &.drawer__status-btn--active {
-        background: var(--color-success-bg, rgba(34, 197, 94, 0.08));
-      }
-    }
+.drawer__status-btn--yellow {
+  background: rgba(234, 179, 8, 0.06);
+  color: #ca8a04;
+}
 
-    &--rejected {
-      color: var(--color-danger);
+.drawer__status-btn--yellow.drawer__status-btn--active {
+  border-color: #ca8a04;
+  background: rgba(234, 179, 8, 0.12);
+}
 
-      &.drawer__status-btn--active {
-        background: var(--color-danger-bg, rgba(239, 68, 68, 0.08));
-      }
-    }
-  }
+.drawer__status-btn--green {
+  background: rgba(34, 197, 94, 0.06);
+  color: #16a34a;
+}
 
-  &__footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+.drawer__status-btn--green.drawer__status-btn--active {
+  border-color: #16a34a;
+  background: rgba(34, 197, 94, 0.12);
+}
 
-  &__footer-main {
-    display: flex;
-    gap: 8px;
-  }
+.drawer__status-btn--gray {
+  background: rgba(148, 163, 184, 0.06);
+  color: #94a3b8;
+}
 
-  &__cancel-btn {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: none;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: background 0.15s;
+.drawer__status-btn--gray.drawer__status-btn--active {
+  border-color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-    }
-  }
+.drawer__status-btn:hover {
+  opacity: 0.85;
+}
 
-  &__save-btn {
-    flex: 1;
-  }
+.drawer__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  &__close-btn {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: none;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: background 0.15s;
+.drawer__footer-main {
+  display: flex;
+  gap: 8px;
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-    }
-  }
+.drawer__save-btn {
+  flex: 1;
+}
 
-  &__delete-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px;
-    border: none;
-    background: none;
-    font-size: 13px;
-    color: var(--color-danger);
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.15s;
+.drawer__cancel-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
 
-    &:hover {
-      background: var(--color-danger-bg, rgba(239, 68, 68, 0.06));
-    }
-  }
+.drawer__cancel-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
 
-  &__delete-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--color-danger-bg, rgba(239, 68, 68, 0.06));
-    border-radius: 8px;
-  }
+.drawer__delete-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 15%, transparent);
+  border-radius: 8px;
+  transition: background 0.15s, border-color 0.15s;
+  box-sizing: border-box;
+}
 
-  &__delete-text {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-danger);
-  }
+.drawer__delete-btn:hover {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+}
 
-  &__delete-actions {
-    display: flex;
-    gap: 8px;
-  }
+.drawer__delete-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
 
-  &__delete-cancel {
-    padding: 4px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-primary);
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--text-secondary);
+.drawer__delete-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--error);
+}
 
-    &:hover {
-      background: var(--bg-secondary);
-    }
-  }
+.drawer__delete-actions {
+  display: flex;
+  gap: 8px;
+}
 
-  &__delete-yes {
-    padding: 4px 12px;
-    border: none;
-    border-radius: 6px;
-    background: var(--color-danger);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.15s;
+.drawer__delete-cancel {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
 
-    &:hover {
-      opacity: 0.85;
-    }
-  }
+.drawer__delete-cancel:hover {
+  background: var(--bg-secondary);
+}
+
+.drawer__delete-yes {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--error);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.drawer__delete-yes:hover {
+  background: color-mix(in srgb, var(--error) 80%, black);
+}
+
+.drawer-enter-active .drawer,
+.drawer-leave-active .drawer {
+  transition: transform 0.25s ease;
 }
 
 .drawer-enter-active,
 .drawer-leave-active {
-  transition: opacity 0.2s ease;
-
-  .drawer {
-    transition: transform 0.25s ease;
-  }
+  transition: opacity 0.25s ease;
 }
 
 .drawer-enter-from,
 .drawer-leave-to {
   opacity: 0;
+}
 
+.drawer-enter-from .drawer,
+.drawer-leave-to .drawer {
+  transform: translateX(100%);
+}
+
+@media (max-width: 768px) {
   .drawer {
-    transform: translateX(100%);
+    width: 100%;
+  }
+
+  .drawer__header {
+    padding: 16px 18px;
+  }
+
+  .drawer__body {
+    padding: 18px;
+  }
+
+  .drawer__footer {
+    padding: 14px 18px 18px;
+  }
+
+  .drawer__field {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .drawer__value {
+    text-align: left;
+  }
+
+  .drawer__delete-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>
