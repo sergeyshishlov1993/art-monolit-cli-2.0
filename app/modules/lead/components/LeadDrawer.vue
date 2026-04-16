@@ -90,6 +90,7 @@ function save() {
 function setStatus(status: string) {
   editStatus.value = status
   emitUpdate()
+  close()
 }
 
 function saveComment() {
