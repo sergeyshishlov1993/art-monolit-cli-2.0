@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { STATUS_LABELS } from '~/modules/lead/constants'
 import { useLeadFormat } from '~/modules/lead/composables/useLeadFormat'
-import type { LeadResponse } from '~/modules/lead/types'
+import { STATUS_OPTIONS } from '~/modules/lead/constants'
+import type { LeadResponse, LeadStatus } from '~/modules/lead/types'
 
 defineProps<{
   lead: LeadResponse
@@ -11,7 +12,10 @@ defineProps<{
 const emit = defineEmits<{
   click: []
   delete: []
+  status: [value: LeadStatus]
 }>()
+
+const statusOptions = STATUS_OPTIONS.filter((option) => option.value !== '')
 
 const { formatDate, formatNumber } = useLeadFormat()
 
@@ -38,12 +42,18 @@ function handleDelete() {
       </div>
     </div>
     <div class="lead-row__right">
-      <span
+      <select
           class="lead-row__badge"
           :class="`lead-row__badge--${STATUS_LABELS[lead.status].variant}`"
+          :value="lead.status"
+          title="Змінити статус"
+          @click.stop
+          @change="emit('status', ($event.target as HTMLSelectElement).value as LeadStatus)"
       >
-        {{ STATUS_LABELS[lead.status].label }}
-      </span>
+        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </select>
       <span class="lead-row__date">{{ formatDate(lead.createdAt) }}</span>
       <button
           type="button"
@@ -123,6 +133,10 @@ function handleDelete() {
 }
 
 .lead-row__badge {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;

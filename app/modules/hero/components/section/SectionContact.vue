@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { CONTACTS } from '~/modules/common/constants/contacts'
+import { useContacts } from '~/modules/common/composables/useContacts'
 
-const scheduleFormatted = CONTACTS.SCHEDULE
+const siteContacts = useContacts()
+
+const scheduleFormatted = computed(() => siteContacts.value.SCHEDULE
     .filter(item => item.time !== 'Вихідний')
     .map(item => `${item.day}: ${item.time}`)
-    .join(', ')
+    .join(', '))
 </script>
 
 <template>
@@ -26,16 +28,16 @@ const scheduleFormatted = CONTACTS.SCHEDULE
             </svg>
             <div>
               <span class="contact__detail-label">Телефон</span>
-              <a :href="CONTACTS.PHONE_1_HREF" class="contact__detail-value">{{ CONTACTS.PHONE_1 }}</a>
+              <a :href="siteContacts.PHONE_1_HREF" class="contact__detail-value">{{ siteContacts.PHONE_1 }}</a>
             </div>
           </div>
-          <div class="contact__detail">
+          <div v-if="siteContacts.EMAIL" class="contact__detail">
             <svg class="contact__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
             <div>
               <span class="contact__detail-label">Email</span>
-              <a :href="CONTACTS.EMAIL_HREF" class="contact__detail-value">{{ CONTACTS.EMAIL }}</a>
+              <a :href="siteContacts.EMAIL_HREF" class="contact__detail-value">{{ siteContacts.EMAIL }}</a>
             </div>
           </div>
           <div class="contact__detail">

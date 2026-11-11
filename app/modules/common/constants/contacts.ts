@@ -1,3 +1,29 @@
+export interface Store {
+    id: string
+    city: string
+    logo: string
+    address: string
+    mapEmbedUrl: string
+}
+
+// Перший магазин — за замовчуванням. Карта Черкас будується за адресою (без точного embed-посилання)
+export const STORES: Store[] = [
+    {
+        id: 'zaporizhzhia',
+        city: 'Запоріжжя',
+        logo: '/cities/zaporizhzhia.png',
+        address: 'м. Запоріжжя, вул. Космічна, 63/1',
+        mapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2680.3862949696722!2d35.206000076577126!3d47.793347075062805!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40dc5e8dd2891185%3A0x8be371d3dda8ebbe!2z0JrQvtGB0LzRltGH0L3QsCDQstGD0LvQuNGG0Y8sIDYzLzEsINCX0LDQv9C-0YDRltC20LbRjywg0JfQsNC_0L7RgNGW0LfRjNC60LAg0L7QsdC70LDRgdGC0YwsIDY5MDAw!5e0!3m2!1suk!2sua!4v1772225755786!5m2!1suk!2sua',
+    },
+    {
+        id: 'cherkasy',
+        city: 'Черкаси',
+        logo: '/cities/cherkasy.png',
+        address: 'м. Черкаси, бул. Шевченко, 335',
+        mapEmbedUrl: 'https://maps.google.com/maps?q=%D0%BC.%20%D0%A7%D0%B5%D1%80%D0%BA%D0%B0%D1%81%D0%B8%2C%20%D0%B1%D1%83%D0%BB.%20%D0%A8%D0%B5%D0%B2%D1%87%D0%B5%D0%BD%D0%BA%D0%BE%2C%20335&hl=uk&output=embed',
+    },
+]
+
 export const CONTACTS = {
     PHONE_1: '+380 (50) 852 05 94',
     PHONE_1_HREF: 'tel:+380508520594',
@@ -5,8 +31,6 @@ export const CONTACTS = {
     PHONE_2_HREF: 'tel:+380985024333',
     EMAIL: 'vasilevka.granit@gmail.com',
     EMAIL_HREF: 'mailto:vasilevka.granit@gmail.com',
-    ADDRESS: 'м. Запоріжжя, вул. Космічна, 63/1',
-    MAP_EMBED_URL: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2680.3862949696722!2d35.206000076577126!3d47.793347075062805!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40dc5e8dd2891185%3A0x8be371d3dda8ebbe!2z0JrQvtGB0LzRltGH0L3QsCDQstGD0LvQuNGG0Y8sIDYzLzEsINCX0LDQv9C-0YDRltC20LbRjywg0JfQsNC_0L7RgNGW0LfRjNC60LAg0L7QsdC70LDRgdGC0YwsIDY5MDAw!5e0!3m2!1suk!2sua!4v1772225755786!5m2!1suk!2sua',
     SCHEDULE: [
         { day: 'Понеділок — П\'ятниця', time: '09:00 — 18:00' },
         { day: 'Субота', time: '10:00 — 15:00' },

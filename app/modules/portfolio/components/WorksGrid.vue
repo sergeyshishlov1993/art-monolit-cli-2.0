@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePortfolioApi } from '~/modules/portfolio/PortfolioApi'
 import type { PortfolioWork } from '~/modules/portfolio/types'
+import { releaseLockedHeight } from '~/modules/common/composables/useLockedHeight'
 import WorksCard from './WorksCard.vue'
 import WorksOverlay from './WorksOverlay.vue'
 import WorksInquiryModal from './WorksInquiryModal.vue'
@@ -26,6 +27,10 @@ const currentPage = ref(1)
 const hasMore = ref(true)
 const isFetching = ref(false)
 const limit = 12
+const contentRef = ref<HTMLElement | null>(null)
+const lockedHeight = ref<number | null>(null)
+
+const contentStyle = computed(() => (lockedHeight.value ? { minHeight: `${lockedHeight.value}px` } : {}))
 
 async function fetchWorks(reset = false) {
   if (isFetching.value) return
@@ -38,6 +43,7 @@ async function fetchWorks(reset = false) {
     if (works.value.length === 0) {
       isLoading.value = true
     } else {
+      lockedHeight.value = contentRef.value?.offsetHeight ?? null
       isRefreshing.value = true
     }
     currentPage.value = 1
@@ -68,6 +74,7 @@ async function fetchWorks(reset = false) {
     isRefreshing.value = false
     isLoadingMore.value = false
     isFetching.value = false
+    void releaseLockedHeight(lockedHeight, contentRef.value)
   }
 }
 
@@ -158,8 +165,11 @@ function handleLoadMore() {
 
 <template>
   <div class="works-grid-wrap">
-    <div v-if="isLoading" class="works-grid__empty">
-      Завантаження...
+    <div v-if="isLoading" class="works-grid">
+      <div v-for="n in limit" :key="n" class="works-grid__skeleton">
+        <BSkeleton aspect="3 / 4" radius="0" />
+        <BSkeleton height="16px" radius="6px" width="70%" />
+      </div>
     </div>
 
     <template v-else>
@@ -167,7 +177,7 @@ function handleLoadMore() {
         Нічого не знайдено
       </div>
 
-      <div v-else class="works-grid-wrap__content">
+      <div v-else ref="contentRef" class="works-grid-wrap__content" :style="contentStyle">
         <div class="works-grid" :class="{ 'works-grid--refreshing': isRefreshing }">
           <WorksCard
               v-for="(work, index) in works"
@@ -177,9 +187,16 @@ function handleLoadMore() {
           />
         </div>
 
-        <div v-if="isRefreshing" class="works-grid__refreshing">
-          Завантаження...
-        </div>
+        <Transition name="works-fade">
+          <div v-if="isRefreshing" class="works-grid__overlay">
+            <div class="works-grid">
+              <div v-for="n in limit" :key="n" class="works-grid__skeleton">
+                <BSkeleton aspect="3 / 4" radius="0" />
+                <BSkeleton height="16px" radius="6px" width="70%" />
+              </div>
+            </div>
+          </div>
+        </Transition>
       </div>
     </template>
 
@@ -216,21 +233,44 @@ function handleLoadMore() {
   gap: 20px;
 }
 
-.works-grid--refreshing {
-  opacity: 0.45;
-  transition: opacity 0.2s;
+.works-grid__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.works-grid__refreshing {
+.works-grid__skeleton > :last-child {
+  margin: 0 16px;
+}
+
+.works-grid--refreshing {
+  opacity: 0.15;
+  pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+
+.works-grid__overlay {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  color: var(--text-muted);
-  background: rgb(255 255 255 / 0.35);
-  backdrop-filter: blur(1px);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.works-fade-enter-active {
+  transition: opacity 0.15s ease-out;
+}
+
+.works-fade-leave-active {
+  transition: opacity 0.1s ease-in;
+}
+
+.works-fade-enter-from,
+.works-fade-leave-to {
+  opacity: 0;
 }
 
 .works-grid__empty {

@@ -36,8 +36,8 @@ function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | nu
         <p class="works__sub">Приклади виконаних замовлень</p>
       </div>
 
-      <div v-if="status === 'pending'" class="works__loading">
-        Завантаження...
+      <div v-if="status === 'pending'" class="works__grid">
+        <BSkeleton v-for="n in 6" :key="n" aspect="4 / 5" />
       </div>
 
       <div v-else-if="worksList.length > 0" class="works__grid">
@@ -51,8 +51,10 @@ function getWorkImage(work: PortfolioWork): PortfolioWork['images'][number] | nu
           <img
               v-if="getWorkImage(work)"
               :src="getWorkImage(work)!.url"
-              :alt="getWorkImage(work)!.alt || 'image'"
+              :alt="getWorkImage(work)!.alt || `Виконана робота — ${work.category?.name ?? 'пам\'ятник'}`"
               class="works__img"
+              loading="lazy"
+              decoding="async"
           >
         </button>
       </div>

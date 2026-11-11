@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { icon: 'photo', label: 'Роботи', to: ROUTES.ADMIN.PORTFOLIOS, count: portfolios },
   { icon: 'sparkles', label: 'Слайдер', to: ROUTES.ADMIN.HERO_SLIDES, count: heroSlides },
   { icon: 'envelope', label: 'Заявки', to: ROUTES.ADMIN.LEADS, count: leads },
+  { icon: 'cog-6-tooth', label: 'Налаштування', to: ROUTES.ADMIN.SETTINGS },
 ]
 
 const isSidebarOpen = ref(true)
@@ -110,6 +111,7 @@ watch(() => route.path, closeMobileMenu)
 
 <style scoped>
 .admin {
+  --icon-scale: 1.25;
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;

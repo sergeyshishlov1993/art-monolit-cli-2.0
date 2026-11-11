@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useAdminCounts } from '~/modules/admin/composables/useAdminCounts'
 import { useLeadStore } from '~/modules/lead/LeadStore'
-import type { LeadResponse } from '~/modules/lead/types'
+import { useLeadApi } from '~/modules/lead/LeadApi'
+import { SOURCE_OPTIONS, STATUS_LABELS } from '~/modules/lead/constants'
+import type { LeadResponse, LeadStats } from '~/modules/lead/types'
 
 definePageMeta({ layout: 'admin' })
 
@@ -9,6 +11,8 @@ const { categories, products, portfolios, leads: leadsCount, heroSlides } = useA
 const leadStore = useLeadStore()
 
 const recentLeads = ref<LeadResponse[]>([])
+const leadStats = ref<LeadStats | null>(null)
+const leadApi = useLeadApi()
 
 const stats = computed(() => [
   { label: 'Товарів', value: products.value, icon: 'cube' },
@@ -39,8 +43,26 @@ function formatDate(dateString: string): string {
 await useAsyncData('admin-dashboard', async (): Promise<null> => {
   const response = await leadStore.fetchAll({ limit: 5, page: 1 })
   recentLeads.value = response.items
+  leadStats.value = await leadApi.stats()
   return null
-})
+}, { server: false }) // токен адміна є лише в браузері, тож на сервері запити заявок падають з 401
+
+const maxDayCount = computed(() => Math.max(1, ...(leadStats.value?.byDay.map(day => day.count) ?? [0])))
+const maxUtmCount = computed(() => Math.max(1, ...(leadStats.value?.byUtm.map(item => item.count) ?? [0])))
+const maxSourceCount = computed(() => Math.max(1, ...(leadStats.value?.bySource.map(item => item.count) ?? [0])))
+
+function sourceLabel(source: string): string {
+  return SOURCE_OPTIONS.find(option => option.value === source)?.label ?? source
+}
+
+function dayLabel(date: string): string {
+  const [, month, day] = date.split('-')
+  return `${day}.${month}`
+}
+
+function percent(count: number): number {
+  return leadStats.value?.total ? Math.round((count / leadStats.value.total) * 100) : 0
+}
 </script>
 
 <template>
@@ -61,6 +83,52 @@ await useAsyncData('admin-dashboard', async (): Promise<null> => {
           <span class="dashboard__stat-value">{{ stat.value }}</span>
           <span class="dashboard__stat-label">{{ stat.label }}</span>
         </div>
+      </div>
+    </div>
+
+    <div v-if="leadStats && leadStats.total" class="dashboard__charts">
+      <div class="dashboard__section dashboard__section--wide">
+        <h2 class="dashboard__section-title">Заявки за 14 днів</h2>
+        <div class="chart" role="img" :aria-label="`Заявки за 14 днів: ${leadStats.byDay.map(day => `${dayLabel(day.date)} — ${day.count}`).join(', ')}`">
+          <div v-for="day in leadStats.byDay" :key="day.date" class="chart__col" :title="`${dayLabel(day.date)}: ${day.count}`">
+            <span class="chart__value">{{ day.count || '' }}</span>
+            <span class="chart__bar" :style="{ height: `${Math.max(2, (day.count / maxDayCount) * 100)}%` }" />
+            <span class="chart__label">{{ dayLabel(day.date) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard__section">
+        <h2 class="dashboard__section-title">Джерела заявок</h2>
+        <ul class="bars">
+          <li v-for="item in leadStats.bySource" :key="item.source" class="bars__row">
+            <span class="bars__label">{{ sourceLabel(item.source) }}</span>
+            <span class="bars__track"><span class="bars__fill" :style="{ width: `${(item.count / maxSourceCount) * 100}%` }" /></span>
+            <span class="bars__count">{{ item.count }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="dashboard__section">
+        <h2 class="dashboard__section-title">Статуси</h2>
+        <ul class="bars">
+          <li v-for="item in leadStats.byStatus" :key="item.status" class="bars__row">
+            <span class="bars__label">{{ STATUS_LABELS[item.status]?.label ?? item.status }}</span>
+            <span class="bars__track"><span class="bars__fill" :style="{ width: `${percent(item.count)}%` }" /></span>
+            <span class="bars__count">{{ item.count }} · {{ percent(item.count) }}%</span>
+          </li>
+        </ul>
+      </div>
+
+      <div v-if="leadStats.byUtm.length" class="dashboard__section dashboard__section--wide">
+        <h2 class="dashboard__section-title">Реклама (UTM): джерело / кампанія</h2>
+        <ul class="bars bars--wide-label">
+          <li v-for="item in leadStats.byUtm" :key="`${item.source}-${item.campaign}`" class="bars__row">
+            <span class="bars__label">{{ item.source }} / {{ item.campaign || '—' }}</span>
+            <span class="bars__track"><span class="bars__fill" :style="{ width: `${(item.count / maxUtmCount) * 100}%` }" /></span>
+            <span class="bars__count">{{ item.count }}</span>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -196,6 +264,121 @@ await useAsyncData('admin-dashboard', async (): Promise<null> => {
 .dashboard__stat-label {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.dashboard__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dashboard__section--wide {
+  grid-column: 1 / -1;
+}
+
+.chart {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  height: 180px;
+  margin-top: 16px;
+}
+
+.chart__col {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.chart__bar {
+  display: block;
+  width: 100%;
+  max-width: 28px;
+  background: var(--gold);
+  border-radius: 4px 4px 0 0;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.chart__col:hover .chart__bar {
+  opacity: 1;
+}
+
+.chart__value {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chart__label {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bars__row {
+  display: grid;
+  grid-template-columns: 120px 1fr 72px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.bars--wide-label .bars__row {
+  grid-template-columns: 260px 1fr 48px;
+}
+
+.bars__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bars__track {
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bars__fill {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 4px;
+}
+
+.bars__count {
+  text-align: right;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .dashboard__charts {
+    grid-template-columns: 1fr;
+  }
+
+  .bars__row {
+    grid-template-columns: 100px 1fr 64px;
+  }
 }
 
 .dashboard__section {

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { refDebounced } from '@vueuse/core'
+import { useLeadApi } from '~/modules/lead/LeadApi'
+import { useLeadFormat } from '~/modules/lead/composables/useLeadFormat'
 import { useLeadStore } from '~/modules/lead/LeadStore'
 import { STATUS_OPTIONS, SOURCE_OPTIONS } from '~/modules/lead/constants'
 import LeadRow from '~/modules/lead/components/LeadRow.vue'
@@ -21,6 +24,9 @@ const leadStore = useLeadStore()
 
 const statusFilter = ref<string>('')
 const sourceFilter = ref<string>('')
+const search = ref<string>('')
+const debouncedSearch = refDebounced(search, 400)
+const isExporting = ref<boolean>(false)
 const drawerOpen = ref<boolean>(false)
 const loadMoreTrigger = ref<HTMLDivElement | null>(null)
 
@@ -32,6 +38,7 @@ async function fetchLeads(): Promise<void> {
   await leadStore.fetchAll({
     status: statusFilter.value || undefined,
     source: sourceFilter.value || undefined,
+    search: debouncedSearch.value || undefined,
     page: 1,
     limit: 20,
   })
@@ -68,6 +75,53 @@ async function deleteLead(): Promise<void> {
 
   await leadStore.remove(leadStore.selectedLead.id)
   closeDrawer()
+}
+
+async function changeStatus(leadId: string, status: LeadStatus): Promise<void> {
+  await leadStore.update(leadId, { status })
+}
+
+function csvCell(value: string | null | undefined): string {
+  const text = (value ?? '').replace(/"/g, '""')
+  // захист від формул у Excel (=, +, -, @)
+  return /^[=+\-@]/.test(text) ? `"'${text}"` : `"${text}"`
+}
+
+async function exportCsv(): Promise<void> {
+  isExporting.value = true
+
+  try {
+    const { formatDate, formatNumber } = useLeadFormat()
+    const response = await useLeadApi().findAll({
+      status: statusFilter.value || undefined,
+      source: sourceFilter.value || undefined,
+      search: debouncedSearch.value || undefined,
+      page: 1,
+      limit: 10000,
+    })
+
+    const header = ['№', 'Ім\'я', 'Телефон', 'Email', 'Статус', 'Джерело', 'Товар', 'Повідомлення', 'Дата']
+    const rows = response.items.map((lead: LeadResponse) => [
+      formatNumber(lead.number),
+      lead.name,
+      lead.phone,
+      lead.email,
+      lead.status,
+      lead.source,
+      lead.product?.title,
+      lead.message,
+      formatDate(lead.createdAt),
+    ].map(csvCell).join(','))
+
+    const blob = new Blob(['\uFEFF' + [header.map(csvCell).join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  } finally {
+    isExporting.value = false
+  }
 }
 
 async function deleteLeadFromList(leadId: string): Promise<void> {
@@ -114,7 +168,7 @@ await useAsyncData('admin-leads', async (): Promise<null> => {
   return null
 })
 
-watch([statusFilter, sourceFilter], async (): Promise<void> => {
+watch([statusFilter, sourceFilter, debouncedSearch], async (): Promise<void> => {
   await fetchLeads()
   await initObserver()
 })
@@ -136,6 +190,12 @@ onBeforeUnmount((): void => {
   <div class="leads">
     <div class="leads__header">
       <h1 class="leads__title">Заявки</h1>
+      <div class="leads__search">
+        <BInput v-model="search" placeholder="Пошук: ім'я, телефон, email" />
+      </div>
+      <BButton variant="outline" size="sm" :loading="isExporting" @click="exportCsv">
+        Експорт CSV
+      </BButton>
       <div class="leads__source-filter">
         <BSelect
             v-model="sourceFilter"
@@ -173,6 +233,7 @@ onBeforeUnmount((): void => {
           :is-selected="leadStore.selectedLead?.id === lead.id"
           @click="openDetail(lead)"
           @delete="deleteLeadFromList(lead.id)"
+          @status="changeStatus(lead.id, $event)"
       />
 
       <div
@@ -209,6 +270,12 @@ onBeforeUnmount((): void => {
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.leads__search {
+  flex: 1;
+  max-width: 320px;
+  margin-left: auto;
 }
 
 .leads__source-filter {

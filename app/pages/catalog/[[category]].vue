@@ -5,7 +5,7 @@ import type { ProductFilters } from '~/modules/product/types'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 import { ROUTES } from '~/modules/common/constants/routes'
 
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default', key: 'catalog' })
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +15,7 @@ const search = ref('')
 const materialSlug = ref('')
 const badge = ref('')
 const targetGroupSlug = ref('')
+const sort = ref('')
 const isApplyingQuery = ref(false)
 
 const areCategoriesReady = ref(categoryStore.categories.length > 0)
@@ -37,13 +38,21 @@ const currentCategory = computed(() => {
 
 const pageTitle = computed(() => currentCategory.value?.name || 'Каталог')
 
+const categoryDescription = computed(() => currentCategory.value?.description?.trim() || '')
+
 const gridFilters = computed<ProductFilters>(() => ({
   categoryId: currentCategory.value?.id,
   material: materialSlug.value || undefined,
   badge: badge.value || undefined,
   targetGroup: targetGroupSlug.value || undefined,
   search: search.value || undefined,
+  sort: sort.value || undefined,
 }))
+
+const sortOptions = [
+  { value: '', label: 'Спочатку нові' },
+  { value: 'title', label: 'За назвою' },
+]
 
 const breadcrumbs = computed(() => {
   const items: Array<{ label: string; to?: string }> = [{ label: 'Каталог', to: ROUTES.CATALOG }]
@@ -60,12 +69,14 @@ async function applyQueryParams(): Promise<void> {
   search.value = ''
   materialSlug.value = ''
   targetGroupSlug.value = ''
+  sort.value = ''
 
   if (route.query.sale !== undefined) badge.value = 'SALE'
   if (route.query.new !== undefined) badge.value = 'NEW'
   if (route.query.hit !== undefined) badge.value = 'HIT'
   if (route.query.search) search.value = String(route.query.search)
   if (route.query.material) materialSlug.value = String(route.query.material)
+  if (route.query.sort === 'title') sort.value = 'title'
 
   await nextTick()
   isApplyingQuery.value = false
@@ -80,13 +91,14 @@ watch(
 )
 
 watch(
-    [search, materialSlug, badge, targetGroupSlug],
+    [search, materialSlug, badge, targetGroupSlug, sort],
     async () => {
       if (isApplyingQuery.value) return
 
       const query: Record<string, string> = {}
 
       if (search.value) query.search = search.value
+      if (sort.value) query.sort = sort.value
       if (materialSlug.value) query.material = materialSlug.value
       if (badge.value === 'SALE') query.sale = ''
       if (badge.value === 'NEW') query.new = ''
@@ -97,8 +109,16 @@ watch(
     { deep: true },
 )
 
+const gridRef = ref<HTMLElement | null>(null)
+
+watch([search, materialSlug, badge, targetGroupSlug], () => {
+  if (isApplyingQuery.value) return
+  scrollToElement(gridRef.value)
+})
+
+watch(routeCategorySlug, () => scrollToElement(gridRef.value))
+
 watch(routeCategorySlug, () => {
-  search.value = ''
   materialSlug.value = ''
   badge.value = ''
   targetGroupSlug.value = ''
@@ -108,9 +128,10 @@ useSeoMeta({
   title: () => currentCategory.value
       ? `${currentCategory.value.name} — ART MONOLIT`
       : 'Каталог — ART MONOLIT',
-  description: () => currentCategory.value
-      ? `${currentCategory.value.name} з граніту та мармуру від виробника`
-      : 'Каталог пам\'ятників з граніту та мармуру від виробника',
+  description: () => categoryDescription.value
+      || (currentCategory.value
+          ? `${currentCategory.value.name} з граніту та мармуру від виробника`
+          : 'Каталог пам\'ятників з граніту та мармуру від виробника'),
 })
 
 function resetFilters() {
@@ -118,7 +139,13 @@ function resetFilters() {
   materialSlug.value = ''
   badge.value = ''
   targetGroupSlug.value = ''
+  sort.value = ''
 }
+
+// Сторінки з пошуком не індексуємо: це дублі каталогу
+useHead({
+  meta: computed(() => (search.value ? [{ name: 'robots', content: 'noindex,follow' }] : [])),
+})
 </script>
 
 <template>
@@ -126,10 +153,24 @@ function resetFilters() {
     <BBreadcrumbs :items="breadcrumbs" />
 
     <div class="catalog-page__header">
-      <h1 class="catalog-page__title">
-        <span class="catalog-page__accent">{{ pageTitle[0] }}</span>{{ pageTitle.slice(1) }}
-      </h1>
-      <p class="catalog-page__sub">{{ pageTitle }} з граніту та мармуру від виробника</p>
+      <div class="catalog-page__heading">
+        <h1 class="catalog-page__title">
+          <span class="catalog-page__accent">{{ pageTitle[0] }}</span>{{ pageTitle.slice(1) }}
+        </h1>
+        <p class="catalog-page__sub">{{ pageTitle }} з граніту та мармуру від виробника</p>
+        <p v-if="categoryDescription" class="catalog-page__desc">{{ categoryDescription }}</p>
+      </div>
+
+      <div class="catalog-page__sort">
+        <BSelect v-model="sort" :options="sortOptions" />
+      </div>
+    </div>
+
+    <div v-if="search" class="catalog-page__search">
+      <span>Результати за запитом «{{ search }}»</span>
+      <button type="button" class="catalog-page__search-clear" aria-label="Скинути пошук" @click="search = ''">
+        <BIcon name="x-mark" size="xs" />
+      </button>
     </div>
 
     <div class="catalog-page__body">
@@ -141,7 +182,7 @@ function resetFilters() {
           @reset="resetFilters"
       />
 
-      <div class="catalog-page__grid">
+      <div ref="gridRef" class="catalog-page__grid">
         <ProductGrid :filters="gridFilters" />
       </div>
     </div>
@@ -156,7 +197,46 @@ function resetFilters() {
 }
 
 .catalog-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
   margin-bottom: 32px;
+}
+
+.catalog-page__sort {
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.catalog-page__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: -12px 0 24px;
+  padding: 6px 8px 6px 14px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.catalog-page__search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.catalog-page__search-clear:hover {
+  color: var(--gold);
 }
 
 .catalog-page__title {
@@ -177,6 +257,14 @@ function resetFilters() {
   color: var(--text-muted);
 }
 
+.catalog-page__desc {
+  margin: 12px 0 0;
+  max-width: 820px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
 .catalog-page__body {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -192,6 +280,15 @@ function resetFilters() {
 @media (max-width: 768px) {
   .catalog-page {
     padding: 40px 10px;
+  }
+
+  .catalog-page__header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .catalog-page__sort {
+    width: 100%;
   }
 
   .catalog-page__body {

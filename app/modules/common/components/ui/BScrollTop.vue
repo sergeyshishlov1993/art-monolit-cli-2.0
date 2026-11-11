@@ -35,7 +35,7 @@ onUnmounted(() => {
 <style scoped>
 .scroll-top {
   position: fixed;
-  bottom: 100px;
+  bottom: calc(100px + var(--mobile-bar-height, 0px));
   right: 24px;
   z-index: 49;
   width: 44px;

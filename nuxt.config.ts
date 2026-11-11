@@ -2,7 +2,12 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-05-15',
     future: { compatibilityVersion: 4 },
     devtools: { enabled: true },
-    modules: ['@pinia/nuxt'],
+    modules: ['@pinia/nuxt', '@nuxtjs/sitemap'],
+    site: { url: process.env.NUXT_PUBLIC_SITE_URL || 'https://art-monolit.com.ua' },
+    sitemap: {
+        exclude: ['/admin/**', '/ui-kit', '/thanks'],
+        sources: ['/api/__sitemap__/urls'],
+    },
     css: [
         '~/assets/css/main.css',
         '~/assets/css/themes.css',
@@ -49,16 +54,6 @@ export default defineNuxtConfig({
                 {
                     innerHTML: `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}document.documentElement.className='theme-'+t})()`,
                     type: 'text/javascript',
-                },
-                {
-                    innerHTML: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5NLD2FPG');`,
-                    type: 'text/javascript',
-                },
-            ],
-            noscript: [
-                {
-                    innerHTML: `<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5NLD2FPG" height="0" width="0" style="display:none;visibility:hidden"></iframe>`,
-                    body: true,
                 },
             ],
         },

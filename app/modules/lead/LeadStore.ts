@@ -8,6 +8,7 @@ import type {
     LeadsListResponse,
 } from './types'
 import { useLeadApi } from '~/modules/lead/LeadApi'
+import { getUtm } from '~/modules/common/composables/useUtm'
 
 type FetchAllOptions = {
     append?: boolean
@@ -44,7 +45,8 @@ export const useLeadStore = defineStore('lead', () => {
         isSubmitting.value = true
 
         try {
-            await api.create(payload)
+            // UTM додаються автоматично до заявок з будь-якої форми
+            await api.create({ ...getUtm(), ...payload })
             isSuccess.value = true
         } finally {
             isSubmitting.value = false
@@ -66,6 +68,7 @@ export const useLeadStore = defineStore('lead', () => {
         currentFilters.value = {
             status: filters.status,
             source: filters.source,
+            search: filters.search,
             page: nextPage,
             limit: nextLimit,
         }

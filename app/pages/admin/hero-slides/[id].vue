@@ -22,6 +22,9 @@ const initialData = computed(() => {
     subtitle: slide.value.subtitle || '',
     buttonText: slide.value.buttonText || '',
     buttonLink: slide.value.buttonLink || '',
+    focusDesktop: slide.value.focusDesktop || undefined,
+    focusTablet: slide.value.focusTablet || undefined,
+    focusMobile: slide.value.focusMobile || undefined,
     sortOrder: slide.value.sortOrder,
     isActive: slide.value.isActive,
   }

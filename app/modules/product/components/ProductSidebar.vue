@@ -38,12 +38,9 @@ await useAsyncData('catalog-filters', async () => {
     categoryStore.categories.length ? null : categoryStore.fetchAll(),
     materialStore.materials.length ? null : materialStore.fetchAll(),
     targetGroupStore.targetGroups.length ? null : targetGroupStore.fetchAll(),
+    productStore.counts ? null : productStore.fetchCounts(),
   ])
   return true
-})
-
-onMounted(() => {
-  productStore.fetchCounts()
 })
 
 function getCategoryCount(slug: string): number {
@@ -87,12 +84,14 @@ const activeFiltersCount = computed(() => {
   return count
 })
 
+// Пошук і сортування зберігаються при зміні категорії; інші фільтри скидаються
 function selectCategory(slug: string) {
-  if (slug) {
-    navigateTo(ROUTES.CATALOG_CATEGORY(slug))
-  } else {
-    navigateTo(ROUTES.CATALOG)
+  const { search, sort } = useRoute().query
+  const query = {
+    ...(typeof search === 'string' && search ? { search } : {}),
+    ...(typeof sort === 'string' && sort ? { sort } : {}),
   }
+  navigateTo({ path: slug ? ROUTES.CATALOG_CATEGORY(slug) : ROUTES.CATALOG, query })
 }
 
 function resetFilters() {

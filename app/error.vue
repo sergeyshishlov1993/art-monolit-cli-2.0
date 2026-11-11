@@ -13,8 +13,19 @@ const title = computed(() => {
   return 'Щось пішло не так'
 })
 
+const searchText = ref('')
+
 function handleBack() {
   clearError({ redirect: '/' })
+}
+
+function handleSearch() {
+  const text = searchText.value.trim()
+  clearError({ redirect: text ? `/catalog?search=${encodeURIComponent(text)}` : '/catalog' })
+}
+
+function handleCatalog() {
+  clearError({ redirect: '/catalog' })
 }
 </script>
 
@@ -25,9 +36,18 @@ function handleBack() {
         <span class="error-page__accent">{{ String(statusCode)[0] }}</span>{{ String(statusCode).slice(1) }}
       </h1>
       <p class="error-page__title">{{ title }}</p>
-      <button class="error-page__btn" @click="handleBack">
-        На головну
-      </button>
+      <form v-if="statusCode === 404" class="error-page__search" @submit.prevent="handleSearch">
+        <input v-model="searchText" type="text" class="error-page__input" placeholder="Пошук виробів..." autocomplete="off">
+        <button type="submit" class="error-page__btn">Знайти</button>
+      </form>
+      <div class="error-page__actions">
+        <button class="error-page__btn" @click="handleBack">
+          На головну
+        </button>
+        <button v-if="statusCode === 404" class="error-page__btn error-page__btn--outline" @click="handleCatalog">
+          До каталогу
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -64,6 +84,41 @@ function handleBack() {
   color: var(--text-muted, #666);
 }
 
+.error-page__search {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.error-page__input {
+  width: 260px;
+  max-width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--text-primary, #1a1a1a);
+  background: transparent;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 8px;
+  outline: none;
+}
+
+.error-page__input:focus {
+  border-color: var(--gold, #c9a84c);
+}
+
+.error-page__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-page__search .error-page__btn {
+  margin-top: 0;
+  padding: 12px 20px;
+}
+
 .error-page__btn {
   margin-top: 32px;
   padding: 12px 32px;
@@ -79,6 +134,12 @@ function handleBack() {
 
 .error-page__btn:hover {
   opacity: 0.85;
+}
+
+.error-page__btn--outline {
+  color: var(--gold, #c9a84c);
+  background: transparent;
+  border: 1px solid var(--gold, #c9a84c);
 }
 
 @media (max-width: 768px) {

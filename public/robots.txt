@@ -1,2 +1,6 @@
-User-Agent: *
-Disallow:
+User-agent: *
+Disallow: /admin
+Disallow: /ui-kit
+Disallow: /thanks
+
+Sitemap: https://art-monolit.com.ua/sitemap.xml

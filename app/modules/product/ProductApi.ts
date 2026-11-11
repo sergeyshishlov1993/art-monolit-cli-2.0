@@ -12,6 +12,7 @@ export function useProductApi() {
             if (filters.badge) query.badge = filters.badge
             if (filters.size) query.size = filters.size
             if (filters.search) query.search = filters.search
+            if (filters.sort) query.sort = filters.sort
             if (filters.all) query.all = 'true'
             if (filters.page) query.page = String(filters.page)
             if (filters.limit) query.limit = String(filters.limit)

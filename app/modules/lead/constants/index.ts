@@ -3,6 +3,9 @@ export type LeadStatus = 'NEW' | 'IN_PROGRESS' | 'DONE' | 'CANCELED'
 export type LeadSource =
     | 'website'
     | 'contact_page'
+    | 'product_page'
+    | 'portfolio'
+    | 'mobile_bar'
     | 'product_card'
     | 'catalog'
     | 'phone'
@@ -31,6 +34,9 @@ export const SOURCE_OPTIONS: readonly { value: '' | LeadSource; label: string }[
     { value: '', label: 'Усі джерела' },
     { value: 'website', label: 'Сайт' },
     { value: 'contact_page', label: 'Контакти' },
+    { value: 'product_page', label: 'Сторінка товару' },
+    { value: 'portfolio', label: 'Портфоліо' },
+    { value: 'mobile_bar', label: 'Нижня панель' },
     { value: 'product_card', label: 'Картка товару' },
     { value: 'catalog', label: 'Каталог' },
     { value: 'phone', label: 'Телефон' },

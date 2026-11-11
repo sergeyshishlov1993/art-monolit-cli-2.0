@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { useLeadStore } from '~/modules/lead/LeadStore'
 import { usePixel } from '~/modules/common/composables/usePixel'
+import { useContacts } from '~/modules/common/composables/useContacts'
+import { trackEvent } from '~/modules/common/composables/useTrack'
+import { useWorkingStatus } from '~/modules/common/composables/useWorkingStatus'
+import { ROUTES } from '~/modules/common/constants/routes'
 
-const AUTO_CLOSE_DELAY = 3000
 const PHONE_MIN_DIGITS = 9
 
 const props = withDefaults(defineProps<{
@@ -24,7 +27,12 @@ const pixel = usePixel()
 const formName = ref('')
 const formPhone = ref('')
 const formMessage = ref('')
+const formWebsite = ref('')
 const submitted = ref(false)
+const submitError = ref(false)
+
+const siteContacts = useContacts()
+const workingStatus = useWorkingStatus()
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '').replace(/^380/, '')
@@ -47,7 +55,9 @@ function resetForm() {
   formName.value = ''
   formPhone.value = ''
   formMessage.value = ''
+  formWebsite.value = ''
   submitted.value = false
+  submitError.value = false
   leadStore.reset()
 }
 
@@ -56,26 +66,35 @@ async function handleSubmit() {
 
   if (nameError.value || phoneError.value) return
 
+  submitError.value = false
+
   const message = props.productTitle
       ? formMessage.value.trim()
           ? `[Виріб: ${props.productTitle}] ${formMessage.value.trim()}`
           : `Запит по виробу: ${props.productTitle}`
       : formMessage.value.trim() || undefined
 
-  await leadStore.submit({
-    name: formName.value.trim(),
-    phone: formPhone.value.trim(),
-    message,
-    productId: props.productId || undefined,
-    source: props.source,
-    pixel,
-  })
+  try {
+    await leadStore.submit({
+      name: formName.value.trim(),
+      phone: formPhone.value.trim(),
+      message,
+      productId: props.productId || undefined,
+      source: props.source,
+      pixel,
+      website: formWebsite.value || undefined,
+    })
+  } catch {
+    submitError.value = true
+    return
+  }
 
   if (leadStore.isSuccess) {
-    setTimeout(() => {
-      resetForm()
-      emit('success')
-    }, AUTO_CLOSE_DELAY)
+    trackEvent('lead_submit', { source: props.source, product: props.productTitle || undefined })
+    resetForm()
+    emit('success')
+    // Окрема сторінка подяки: дає чітку ціль для реклами та аналітики
+    await navigateTo({ path: ROUTES.THANKS, query: { from: props.source } })
   }
 }
 
@@ -85,48 +104,51 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Transition name="lead-form-fade" mode="out-in">
-    <div v-if="leadStore.isSuccess" class="lead-form__success">
-      <svg class="lead-form__success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      <h3 class="lead-form__success-title">Дякуємо!</h3>
-      <p class="lead-form__success-text">Ми зв'яжемося з вами найближчим часом</p>
-    </div>
+  <div class="lead-form__fields">
+  <p v-if="props.productTitle" class="lead-form__ref">Виріб: {{ props.productTitle }}</p>
 
-    <div v-else class="lead-form__fields">
-      <p v-if="props.productTitle" class="lead-form__ref">Виріб: {{ props.productTitle }}</p>
+  <div class="lead-form__hp" aria-hidden="true">
+    <label>Website <input v-model="formWebsite" type="text" name="website" tabindex="-1" autocomplete="off"></label>
+  </div>
 
-      <BInput
-          v-model="formName"
-          label="Ім'я"
-          placeholder="Ваше ім'я"
-          required
-          :error="nameError"
-      />
-      <BInput
-          v-model="formPhone"
-          label="Телефон"
-          phone
-          required
-          :error="phoneError"
-      />
-      <BTextarea
-          v-model="formMessage"
-          label="Повідомлення"
-          placeholder="Опишіть ваше замовлення або задайте питання..."
-          :rows="3"
-      />
-      <BButton
-          size="lg"
-          :loading="leadStore.isSubmitting"
-          class="lead-form__submit"
-          @click="handleSubmit"
-      >
-        Надіслати заявку
-      </BButton>
-    </div>
-  </Transition>
+  <BInput
+      v-model="formName"
+      label="Ім'я"
+      placeholder="Ваше ім'я"
+      required
+      :error="nameError"
+  />
+  <BInput
+      v-model="formPhone"
+      label="Телефон"
+      phone
+      required
+      :error="phoneError"
+  />
+  <BTextarea
+      v-model="formMessage"
+      label="Повідомлення"
+      placeholder="Опишіть ваше замовлення або задайте питання..."
+      :rows="3"
+  />
+  <p v-if="submitError" class="lead-form__error" role="alert">
+    Не вдалося надіслати заявку. Спробуйте ще раз або зателефонуйте:
+    <a :href="siteContacts.PHONE_1_HREF">{{ siteContacts.PHONE_1 }}</a>
+  </p>
+  <BButton
+      size="lg"
+      :loading="leadStore.isSubmitting"
+      class="lead-form__submit"
+      @click="handleSubmit"
+  >
+    Надіслати заявку
+  </BButton>
+  <p v-if="workingStatus" class="lead-form__status">
+    <span class="lead-form__dot" :class="{ 'lead-form__dot--open': workingStatus.open }" />
+    <template v-if="workingStatus.open">Зараз працюємо ({{ workingStatus.text }}) — передзвонимо протягом 30 хвилин</template>
+    <template v-else>Зараз зачинено — передзвонимо {{ workingStatus.text }}</template>
+  </p>
+</div>
 </template>
 
 <style scoped>
@@ -146,41 +168,43 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.lead-form__success {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 12px;
-  padding: 40px 0;
+.lead-form__hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
-.lead-form__success-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--gold);
-}
-
-.lead-form__success-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.lead-form__success-text {
+.lead-form__error {
   margin: 0;
   font-size: 14px;
+  color: #d32f2f;
+}
+
+.lead-form__error a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.lead-form__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
-.lead-form-fade-enter-active,
-.lead-form-fade-leave-active {
-  transition: opacity 0.3s;
+.lead-form__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background: #9e9e9e;
+  border-radius: 50%;
 }
 
-.lead-form-fade-enter-from,
-.lead-form-fade-leave-to {
-  opacity: 0;
+.lead-form__dot--open {
+  background: #2e7d32;
 }
 </style>

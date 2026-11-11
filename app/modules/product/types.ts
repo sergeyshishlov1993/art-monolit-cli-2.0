@@ -61,6 +61,7 @@ export interface ProductFilters {
     badge?: string
     size?: string
     search?: string
+    sort?: string
     all?: boolean
     page?: number
     limit?: number

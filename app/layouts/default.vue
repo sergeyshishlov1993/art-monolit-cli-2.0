@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ROUTES } from "~/modules/common/constants/routes"
 import { useCategoryStore } from '~/modules/category/CategoryStore'
+import MobileContactBar from '~/modules/common/components/MobileContactBar.vue'
 
 const categoryStore = useCategoryStore()
 
@@ -20,41 +21,18 @@ const navItems = computed(() => [
   { label: 'Про нас', to: ROUTES.ABOUT },
   { label: 'Контакти', to: ROUTES.CONTACTS },
 ])
-
-const footerColumns = computed(() => [
-  {
-    title: 'Навігація',
-    links: [
-      { label: 'Каталог', to: ROUTES.CATALOG },
-      { label: 'Портфоліо', to: ROUTES.PORTFOLIO },
-      { label: 'Про компанію', to: ROUTES.ABOUT },
-      { label: 'Контакти', to: ROUTES.CONTACTS },
-    ],
-  },
-  {
-    title: 'Каталог',
-    links: categoryStore.categories.slice(0, 5).map(cat => ({
-      label: cat.name,
-      to: ROUTES.CATALOG_CATEGORY(cat.slug),
-    })),
-  },
-])
-
-const footerContacts = [
-  { icon: 'location' as const, text: 'м. Київ, вул. Прикладна 1' },
-  { icon: 'phone' as const, text: '+380 (99) 123-45-67', href: 'tel:+380991234567' },
-  { icon: 'email' as const, text: 'info@artmonolit.ua', href: 'mailto:info@artmonolit.ua' },
-]
 </script>
 
 <template>
   <div class="app-layout">
     <TheHeader :nav="navItems">
       <template #actions>
+        <CitySwitcher />
         <BThemeToggle />
       </template>
 
       <template #actionsMobile>
+        <CitySwitcher />
         <BThemeToggle />
       </template>
     </TheHeader>
@@ -63,13 +41,15 @@ const footerContacts = [
       <slot />
     </main>
 
-    <TheFooter
-        :columns="footerColumns"
-        :contacts="footerContacts"
-        description="Каменеобробне підприємство. Вироби з мармуру та граніту від виробника."
-    />
+    <ClientOnly>
+      <CityModal />
+    </ClientOnly>
+    <CookieBanner />
+
+    <TheFooter />
     <BScrollTop />
     <BQuickContact />
+    <MobileContactBar />
   </div>
 </template>
 
@@ -82,5 +62,13 @@ const footerContacts = [
 
 .app-main {
   flex: 1;
+}
+
+/* Нижня панель зв'язку на телефоні: решта фіксованих елементів піднімається над нею */
+@media (max-width: 768px) {
+  .app-layout {
+    --mobile-bar-height: 56px;
+    padding-bottom: var(--mobile-bar-height);
+  }
 }
 </style>

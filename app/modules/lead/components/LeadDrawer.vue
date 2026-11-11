@@ -183,6 +183,10 @@ watch(() => props.modelValue, (isOpen) => {
                 <span class="drawer__value">{{ SOURCE_LABELS[lead.source] || lead.source }}</span>
               </div>
               <div class="drawer__field">
+                <span class="drawer__label">Реклама (UTM)</span>
+                <span class="drawer__value">{{ [lead.utmSource, lead.utmMedium, lead.utmCampaign].filter(Boolean).join(' / ') || '—' }}</span>
+              </div>
+              <div class="drawer__field">
                 <span class="drawer__label">Піксель</span>
                 <span class="drawer__value drawer__value--mono">{{ lead.pixel || '—' }}</span>
               </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProductFilters, Product } from '~/modules/product/types'
 import { useProductApi } from '~/modules/product/ProductApi'
+import { releaseLockedHeight } from '~/modules/common/composables/useLockedHeight'
 
 const props = defineProps<{
   filters: ProductFilters
@@ -30,6 +31,7 @@ function buildRequestFilters(page: number): ProductFilters {
     badge: props.filters.badge || undefined,
     targetGroup: props.filters.targetGroup || undefined,
     search: props.filters.search || undefined,
+    sort: props.filters.sort || undefined,
     page,
     limit,
   }
@@ -77,8 +79,23 @@ async function fetchProducts(reset = false): Promise<void> {
     isLoadingMore.value = false
     isFetching.value = false
     isFilterChanging.value = false
-    lockedHeight.value = null
+    void releaseLockedHeight(lockedHeight, contentRef.value)
   }
+}
+
+// Перша сторінка вантажиться на сервері, щоб посилання на товари були в HTML (SEO)
+const { data: initialData } = await useAsyncData(
+    `catalog-grid-${JSON.stringify(buildRequestFilters(1))}`,
+    () => productApi.getAll(buildRequestFilters(1)),
+)
+
+if (initialData.value) {
+  products.value = initialData.value.items
+  hasMore.value = initialData.value.hasMore
+  totalCount.value = initialData.value.total
+  currentPage.value = initialData.value.page + 1
+} else {
+  await fetchProducts(true)
 }
 
 watch(
@@ -86,7 +103,7 @@ watch(
     async () => {
       await fetchProducts(true)
     },
-    { deep: true, immediate: true },
+    { deep: true },
 )
 
 function onScroll(): void {
@@ -187,6 +204,7 @@ const contentStyle = computed(() => {
 
       <Transition name="catalog-fade">
         <div v-if="isFilterChanging" class="catalog-grid__overlay">
+          <span class="catalog-grid__spinner catalog-grid__spinner--overlay" role="status" aria-label="Завантаження" />
           <div class="catalog-grid__overlay-grid">
             <div
                 v-for="cardIndex in skeletonCards"
@@ -203,6 +221,7 @@ const contentStyle = computed(() => {
 
     <div v-if="hasMore && hasProducts" ref="loadMoreTrigger" class="catalog-grid__trigger">
       <div v-if="isLoadingMore" class="catalog-grid__loading">
+        <span class="catalog-grid__spinner" aria-hidden="true" />
         Завантаження...
       </div>
     </div>
@@ -255,18 +274,47 @@ const contentStyle = computed(() => {
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   align-content: start;
+  transition: opacity 0.35s ease;
 }
 
+/* Затемнення з невеликою затримкою: швидкі відповіді API не дають «блимання» */
 .catalog-grid__items--loading {
-  opacity: 0.15;
+  opacity: 0.4;
   pointer-events: none;
-  transition: opacity 0.15s ease-out;
+  transition-delay: 0.15s;
 }
 
 .catalog-grid__overlay {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.catalog-grid__spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgb(128 128 128 / 0.25);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: catalog-spin 0.8s linear infinite;
+}
+
+.catalog-grid__spinner--overlay {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  z-index: 1;
+}
+
+@keyframes catalog-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .catalog-grid__overlay-grid {
@@ -277,11 +325,11 @@ const contentStyle = computed(() => {
 }
 
 .catalog-fade-enter-active {
-  transition: opacity 0.15s ease-out;
+  transition: opacity 0.35s ease 0.15s;
 }
 
 .catalog-fade-leave-active {
-  transition: opacity 0.1s ease-in;
+  transition: opacity 0.35s ease;
 }
 
 .catalog-fade-enter-from,
@@ -326,7 +374,10 @@ const contentStyle = computed(() => {
 }
 
 .catalog-grid__loading {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   padding: 32px 0;
   font-size: 14px;
   color: var(--text-muted);
@@ -345,15 +396,21 @@ const contentStyle = computed(() => {
   background: linear-gradient(
       90deg,
       transparent 0%,
-      rgb(255 255 255 / 0.32) 50%,
+      rgb(255 255 255 / 0.2) 50%,
       transparent 100%
   );
-  animation: shimmer 1.2s infinite;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after {
+    animation: none;
   }
 }
 

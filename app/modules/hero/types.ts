@@ -5,6 +5,9 @@ export interface HeroSlide {
     buttonText: string | null
     buttonLink: string | null
     imageUrl: string | null
+    focusDesktop: string | null
+    focusTablet: string | null
+    focusMobile: string | null
     sortOrder: number
     isActive: boolean
     createdAt: string

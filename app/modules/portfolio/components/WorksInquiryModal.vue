@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useLeadStore } from '~/modules/lead/LeadStore'
+import { trackEvent } from '~/modules/common/composables/useTrack'
+import { ROUTES } from '~/modules/common/constants/routes'
 import type { PortfolioWork } from '~/modules/portfolio/types'
 
 const props = defineProps<{
@@ -16,6 +18,7 @@ const leadStore = useLeadStore()
 const inquiryName = ref('')
 const inquiryPhone = ref('')
 const inquiryMessage = ref('')
+const submitError = ref(false)
 
 const touchStartX = ref(0)
 const touchStartY = ref(0)
@@ -34,6 +37,7 @@ watch(() => props.modelValue, (open) => {
     inquiryName.value = ''
     inquiryPhone.value = ''
     inquiryMessage.value = ''
+    submitError.value = false
     leadStore.reset()
   }
 })
@@ -57,14 +61,25 @@ function handleTouchEnd(event: TouchEvent) {
 
 async function submit() {
   if (!inquiryName.value.trim() || !inquiryPhone.value.trim()) return
-  await leadStore.submit({
-    name: inquiryName.value.trim(),
-    phone: inquiryPhone.value.trim(),
-    message: inquiryMessage.value.trim()
-        ? `[Каталог: ${workLabel.value}] ${inquiryMessage.value.trim()}`
-        : `Запит по роботі: ${workLabel.value}`,
-    source: 'catalog',
-  })
+  submitError.value = false
+
+  try {
+    await leadStore.submit({
+      name: inquiryName.value.trim(),
+      phone: inquiryPhone.value.trim(),
+      message: inquiryMessage.value.trim()
+          ? `[Портфоліо: ${workLabel.value}] ${inquiryMessage.value.trim()}`
+          : `Запит по роботі: ${workLabel.value}`,
+      source: 'portfolio',
+    })
+  } catch {
+    submitError.value = true
+    return
+  }
+
+  trackEvent('lead_submit', { source: 'portfolio' })
+  close()
+  await navigateTo({ path: ROUTES.THANKS, query: { from: 'portfolio' } })
 }
 
 function close() {
@@ -75,38 +90,22 @@ function close() {
 
 <template>
   <BModal :model-value="modelValue" title="Замовити подібну роботу" @update:model-value="emit('update:modelValue', $event)">
-    <template v-if="leadStore.isSuccess">
-      <div
-          class="works-inquiry__success"
-          @touchstart="handleTouchStart"
-          @touchend="handleTouchEnd"
-      >
-        <p class="works-inquiry__success-title">Заявку відправлено!</p>
-        <p class="works-inquiry__success-text">Ми зв'яжемося з вами найближчим часом</p>
+    <div
+        class="works-inquiry__content"
+        @touchstart="handleTouchStart"
+        @touchend="handleTouchEnd"
+    >
+      <p v-if="workLabel" class="works-inquiry__ref">Робота: {{ workLabel }}</p>
+      <div class="works-inquiry">
+        <BInput v-model="inquiryName" label="Ім'я" placeholder="Ваше ім'я" required />
+        <BInput v-model="inquiryPhone" label="Телефон" placeholder="+380 (__) ___-__-__" required phone />
+        <BTextarea v-model="inquiryMessage" label="Побажання" placeholder="Опишіть, що б ви хотіли..." />
+        <p v-if="submitError" class="works-inquiry__error" role="alert">Не вдалося надіслати заявку. Спробуйте ще раз.</p>
       </div>
-    </template>
-    <template v-else>
-      <div
-          class="works-inquiry__content"
-          @touchstart="handleTouchStart"
-          @touchend="handleTouchEnd"
-      >
-        <p v-if="workLabel" class="works-inquiry__ref">Робота: {{ workLabel }}</p>
-        <div class="works-inquiry">
-          <BInput v-model="inquiryName" label="Ім'я" placeholder="Ваше ім'я" required />
-          <BInput v-model="inquiryPhone" label="Телефон" placeholder="+380 (__) ___-__-__" required phone />
-          <BTextarea v-model="inquiryMessage" label="Побажання" placeholder="Опишіть, що б ви хотіли..." />
-        </div>
-      </div>
-    </template>
+    </div>
     <template #footer>
-      <template v-if="leadStore.isSuccess">
-        <BButton @click="close">Закрити</BButton>
-      </template>
-      <template v-else>
-        <BButton variant="ghost" @click="close">Скасувати</BButton>
-        <BButton :loading="leadStore.isSubmitting" @click="submit">Відправити</BButton>
-      </template>
+      <BButton variant="ghost" @click="close">Скасувати</BButton>
+      <BButton :loading="leadStore.isSubmitting" @click="submit">Відправити</BButton>
     </template>
   </BModal>
 </template>
@@ -128,22 +127,9 @@ function close() {
   gap: 16px;
 }
 
-.works-inquiry__success {
-  text-align: center;
-  padding: 24px 0;
-  touch-action: pan-y;
-}
-
-.works-inquiry__success-title {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.works-inquiry__success-text {
+.works-inquiry__error {
   margin: 0;
   font-size: 14px;
-  color: var(--text-muted);
+  color: #d32f2f;
 }
 </style>

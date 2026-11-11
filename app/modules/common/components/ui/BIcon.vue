@@ -31,13 +31,11 @@ const iconComponent = computed(() => {
   return (icons as Record<string, unknown>)[pascal] ?? null
 })
 
-const iconStyle = computed(() => ({
-  width: sizeMap[props.size],
-  height: sizeMap[props.size],
-  minWidth: sizeMap[props.size],
-  minHeight: sizeMap[props.size],
-  display: 'block',
-}))
+// --icon-scale задається в layout адмінки; на публічному сайті = 1
+const iconStyle = computed(() => {
+  const size = `calc(${sizeMap[props.size]} * var(--icon-scale, 1))`
+  return { width: size, height: size, minWidth: size, minHeight: size, display: 'block' }
+})
 </script>
 
 <template>

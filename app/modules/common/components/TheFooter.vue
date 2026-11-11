@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import BIconLogo from '~/assets/icon/b-icon-logo.vue'
 import { ROUTES } from '~/modules/common/constants/routes'
-import { CONTACTS } from '~/modules/common/constants/contacts'
+import { useContacts } from '~/modules/common/composables/useContacts'
 import { useCategoryStore } from '~/modules/category/CategoryStore'
 
 const categoryStore = useCategoryStore()
+const siteContacts = useContacts()
 
 const iconPaths: Record<string, string> = {
   location: 'M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z',
@@ -26,12 +27,14 @@ const companyLinks = [
   { label: 'Контакти', to: ROUTES.CONTACTS },
 ]
 
-const contactItems = [
-  { icon: 'location', text: CONTACTS.ADDRESS },
-  { icon: 'phone', text: CONTACTS.PHONE_1, href: CONTACTS.PHONE_1_HREF },
-  { icon: 'phone', text: CONTACTS.PHONE_2, href: CONTACTS.PHONE_2_HREF },
-  { icon: 'email', text: CONTACTS.EMAIL, href: CONTACTS.EMAIL_HREF },
-]
+const { current: currentStore } = useCurrentStore()
+
+const contactItems = computed(() => [
+  ...(currentStore.value.address ? [{ icon: 'location', text: currentStore.value.address }] : []),
+  { icon: 'phone', text: siteContacts.value.PHONE_1, href: siteContacts.value.PHONE_1_HREF },
+  ...(siteContacts.value.PHONE_2 ? [{ icon: 'phone', text: siteContacts.value.PHONE_2, href: siteContacts.value.PHONE_2_HREF }] : []),
+  ...(siteContacts.value.EMAIL ? [{ icon: 'email', text: siteContacts.value.EMAIL, href: siteContacts.value.EMAIL_HREF }] : []),
+])
 
 const copyright = `© ${new Date().getFullYear()} Art Monolit. Усі права захищені.`
 </script>
@@ -48,7 +51,7 @@ const copyright = `© ${new Date().getFullYear()} Art Monolit. Усі права
           <p class="footer__desc">Виробництво виробів з натурального каменю</p>
           <div class="footer__socials">
             <a
-                v-for="social in CONTACTS.SOCIALS"
+                v-for="social in siteContacts.SOCIALS"
                 :key="social.name"
                 :href="social.href"
                 target="_blank"

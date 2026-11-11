@@ -25,7 +25,7 @@ defineEmits<{
 <style scoped>
 .sticky-bar {
   position: fixed;
-  bottom: 0;
+  bottom: var(--mobile-bar-height, 0px);
   left: 0;
   right: 0;
   z-index: 100;

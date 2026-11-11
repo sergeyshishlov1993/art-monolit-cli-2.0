@@ -11,6 +11,9 @@ interface HeroSlideFormData {
   subtitle: string
   buttonText: string
   buttonLink: string
+  focusDesktop: string
+  focusTablet: string
+  focusMobile: string
   sortOrder: number
   isActive: boolean
 }
@@ -39,9 +42,67 @@ const form = reactive<HeroSlideFormData>({
   subtitle: props.initialData.subtitle || '',
   buttonText: props.initialData.buttonText || '',
   buttonLink: props.initialData.buttonLink || '',
+  focusDesktop: props.initialData.focusDesktop || '50% 50%',
+  focusTablet: props.initialData.focusTablet || '50% 50%',
+  focusMobile: props.initialData.focusMobile || '50% 50%',
   sortOrder: props.initialData.sortOrder ?? 0,
   isActive: props.initialData.isActive ?? true,
 })
+
+type FocusKey = 'focusDesktop' | 'focusTablet' | 'focusMobile'
+
+const focusDevices: { key: FocusKey; label: string; aspect: string }[] = [
+  { key: 'focusDesktop', label: 'Десктоп', aspect: '16 / 7' },
+  { key: 'focusTablet', label: 'Планшет', aspect: '4 / 3' },
+  { key: 'focusMobile', label: 'Телефон', aspect: '3 / 4' },
+]
+const activeFocus = ref<FocusKey>('focusDesktop')
+const activeAspect = computed(() => focusDevices.find((device) => device.key === activeFocus.value)!.aspect)
+
+function parseFocus(value: string): [number, number] {
+  const [x, y] = value.split(' ').map((part) => parseInt(part, 10))
+  return [x ?? 50, y ?? 50]
+}
+
+const frameRef = ref<HTMLElement | null>(null)
+const naturalSize = ref<{ width: number; height: number } | null>(null)
+const isDragging = ref(false)
+let dragStart: { x: number; y: number; focusX: number; focusY: number } | null = null
+
+function clampPercent(value: number): number {
+  return Math.round(Math.min(100, Math.max(0, value)))
+}
+
+function onPreviewLoad(event: Event): void {
+  const image = event.target as HTMLImageElement
+  naturalSize.value = { width: image.naturalWidth, height: image.naturalHeight }
+}
+
+function onFocusPointerDown(event: PointerEvent): void {
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  const [focusX, focusY] = parseFocus(form[activeFocus.value])
+  dragStart = { x: event.clientX, y: event.clientY, focusX, focusY }
+  isDragging.value = true
+}
+
+// Перетягування зображення: рух вправо/вниз зсуває кадр, тому фокус рухається в протилежний бік
+function onFocusPointerMove(event: PointerEvent): void {
+  if (!dragStart || !frameRef.value || !naturalSize.value) return
+
+  const frame = frameRef.value.getBoundingClientRect()
+  const scale = Math.max(frame.width / naturalSize.value.width, frame.height / naturalSize.value.height)
+  const overflowX = naturalSize.value.width * scale - frame.width
+  const overflowY = naturalSize.value.height * scale - frame.height
+
+  const nextX = overflowX > 0 ? dragStart.focusX - ((event.clientX - dragStart.x) / overflowX) * 100 : dragStart.focusX
+  const nextY = overflowY > 0 ? dragStart.focusY - ((event.clientY - dragStart.y) / overflowY) * 100 : dragStart.focusY
+  form[activeFocus.value] = `${clampPercent(nextX)}% ${clampPercent(nextY)}%`
+}
+
+function onFocusPointerUp(): void {
+  dragStart = null
+  isDragging.value = false
+}
 
 const photo = ref<File | null>(null)
 const existingImage = ref<ExistingImage | null>(null)
@@ -134,6 +195,35 @@ async function handleSubmit() {
               :max-size="5"
               @update:model-value="onFileChange"
           />
+        </div>
+
+        <div v-if="imagePreview" class="admin-card">
+          <h3 class="admin-card__title">Фокус зображення</h3>
+          <div class="admin-focus__tabs">
+            <button
+                v-for="device in focusDevices"
+                :key="device.key"
+                type="button"
+                class="admin-focus__tab"
+                :class="{ 'admin-focus__tab--active': activeFocus === device.key }"
+                @click="activeFocus = device.key"
+            >
+              {{ device.label }}
+            </button>
+          </div>
+          <div
+              ref="frameRef"
+              class="admin-focus__frame"
+              :class="[`admin-focus__frame--${activeFocus}`, { 'admin-focus__frame--dragging': isDragging }]"
+              :style="{ aspectRatio: activeAspect }"
+              @pointerdown.prevent="onFocusPointerDown"
+              @pointermove="onFocusPointerMove"
+              @pointerup="onFocusPointerUp"
+              @pointercancel="onFocusPointerUp"
+          >
+            <img :src="imagePreview" alt="Фокус" draggable="false" :style="{ objectPosition: form[activeFocus] }" @load="onPreviewLoad">
+          </div>
+          <p class="admin-focus__hint">Перетягніть зображення, щоб обрати видиму область · {{ form[activeFocus] }}</p>
         </div>
       </div>
 
@@ -272,6 +362,64 @@ async function handleSubmit() {
   height: 16px;
   accent-color: var(--gold);
   cursor: pointer;
+}
+
+.admin-focus__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-focus__tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-focus__tab--active {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.admin-focus__frame {
+  margin: 0 auto 16px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+}
+
+.admin-focus__frame {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.admin-focus__frame--dragging {
+  cursor: grabbing;
+}
+
+.admin-focus__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.admin-focus__frame--focusMobile {
+  max-width: 240px;
+}
+
+.admin-focus__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .admin-slide-preview {

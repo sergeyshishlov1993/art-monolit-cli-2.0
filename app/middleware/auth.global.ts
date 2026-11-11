@@ -12,21 +12,11 @@ export default defineNuxtRouteMiddleware((to) => {
 
     const isLoginPage = to.path === ROUTES.ADMIN.LOGIN
 
-    console.log('Middleware:', {
-        path: to.path,
-        isLoginPage,
-        isAuthenticated: authStore.isAuthenticated,
-        token: !!authStore.token,
-        initialized: authStore.initialized
-    })
-
     if (isLoginPage && authStore.isAuthenticated) {
-        console.log('Redirecting to admin root')
         return navigateTo(ROUTES.ADMIN.ROOT)
     }
 
     if (!isLoginPage && !authStore.isAuthenticated) {
-        console.log('Redirecting to login')
         return navigateTo(ROUTES.ADMIN.LOGIN)
     }
 })

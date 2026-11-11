@@ -2,6 +2,7 @@ import type {
     CreateLeadPayload,
     UpdateLeadPayload,
     LeadResponse,
+    LeadStats,
     LeadFilters,
     LeadsListResponse,
 } from './types'
@@ -27,6 +28,10 @@ export function useLeadApi() {
                 query.source = filters.source
             }
 
+            if (filters.search) {
+                query.search = filters.search
+            }
+
             if (typeof filters.page === 'number') {
                 query.page = String(filters.page)
             }
@@ -37,6 +42,9 @@ export function useLeadApi() {
 
             return $api<LeadsListResponse>('/leads', { query })
         },
+
+        stats: (): Promise<LeadStats> =>
+            $api<LeadStats>('/leads/stats'),
 
         findById: (id: string): Promise<LeadResponse> =>
             $api<LeadResponse>(`/leads/${id}`),

@@ -6,10 +6,13 @@ import SectionWorks from '~/modules/hero/components/section/SectionWorks.vue'
 import SectionSteps from '~/modules/hero/components/section/SectionSteps.vue'
 import SectionContact from '~/modules/hero/components/section/SectionContact.vue'
 import SectionMap from '~/modules/hero/components/section/SectionMap.vue'
+import { useLocalBusinessJsonLd } from '~/modules/common/composables/useLocalBusinessJsonLd'
 
 definePageMeta({
   layout: 'default',
 })
+
+useLocalBusinessJsonLd()
 
 useSeoMeta({
   title: 'ART MONOLIT — Вироби з натурального каменю',

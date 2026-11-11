@@ -1,19 +1,27 @@
 <script setup lang="ts">
-import { CONTACTS } from '~/modules/common/constants/contacts'
+import { useContacts } from '~/modules/common/composables/useContacts'
+import { useLocalBusinessJsonLd } from '~/modules/common/composables/useLocalBusinessJsonLd'
 
 definePageMeta({ layout: 'default' })
+
+useLocalBusinessJsonLd()
 
 useSeoMeta({
   title: 'Контакти — ART MONOLIT',
   description: 'Зв\'яжіться з нами для замовлення пам\'ятників з граніту та мармуру',
 })
 
-const contacts = [
-  { icon: 'phone', label: 'Телефон', value: CONTACTS.PHONE_1, href: CONTACTS.PHONE_1_HREF },
-  { icon: 'phone', label: 'Телефон 2', value: CONTACTS.PHONE_2, href: CONTACTS.PHONE_2_HREF },
-  { icon: 'envelope', label: 'Email', value: CONTACTS.EMAIL, href: CONTACTS.EMAIL_HREF },
-  { icon: 'location', label: 'Адреса', value: CONTACTS.ADDRESS, href: null },
-]
+const { current: currentStore, enabled: storeSelectorEnabled, chooserOpen } = useCurrentStore()
+const siteContacts = useContacts()
+
+const contacts = computed(() => [
+  { icon: 'phone', label: 'Телефон', value: siteContacts.value.PHONE_1, href: siteContacts.value.PHONE_1_HREF },
+  ...(siteContacts.value.PHONE_2 ? [{ icon: 'phone', label: 'Телефон 2', value: siteContacts.value.PHONE_2, href: siteContacts.value.PHONE_2_HREF }] : []),
+  ...(siteContacts.value.EMAIL ? [{ icon: 'envelope', label: 'Email', value: siteContacts.value.EMAIL, href: siteContacts.value.EMAIL_HREF }] : []),
+  ...(currentStore.value.address
+    ? [{ icon: 'location', label: 'Адреса', value: currentStore.value.address, href: null }]
+    : []),
+])
 
 const inquiryOpen = ref(false)
 
@@ -37,6 +45,10 @@ function closeInquiry() {
       <div class="contacts-page__info">
         <div class="contacts-block">
           <h2 class="contacts-block__title">Зв'язок</h2>
+          <p v-if="storeSelectorEnabled" class="contacts-block__city">
+            {{ currentStore.city }} ·
+            <button type="button" class="contacts-block__city-btn" @click="chooserOpen = true">Змінити місто</button>
+          </p>
           <ul class="contacts-list">
             <li v-for="item in contacts" :key="item.label" class="contacts-list__item">
               <BIcon :name="item.icon" size="sm" class="contacts-list__icon" />
@@ -58,7 +70,7 @@ function closeInquiry() {
         <div class="contacts-block">
           <h2 class="contacts-block__title">Графік роботи</h2>
           <ul class="schedule">
-            <li v-for="item in CONTACTS.SCHEDULE" :key="item.day" class="schedule__item">
+            <li v-for="item in siteContacts.SCHEDULE" :key="item.day" class="schedule__item">
               <span class="schedule__day">{{ item.day }}</span>
               <span class="schedule__time" :class="{ 'schedule__time--off': item.time === 'Вихідний' }">
                 {{ item.time }}
@@ -71,7 +83,7 @@ function closeInquiry() {
           <h2 class="contacts-block__title">Соціальні мережі</h2>
           <div class="socials">
             <a
-                v-for="social in CONTACTS.SOCIALS"
+                v-for="social in siteContacts.SOCIALS"
                 :key="social.name"
                 :href="social.href"
                 class="socials__item"
@@ -99,10 +111,11 @@ function closeInquiry() {
         </div>
       </div>
 
-      <div class="contacts-page__map">
+      <div v-if="currentStore.mapEmbedUrl" class="contacts-page__map">
         <div class="contacts-map">
           <iframe
-              :src="CONTACTS.MAP_EMBED_URL"
+              :key="currentStore.id"
+              :src="currentStore.mapEmbedUrl"
               width="100%"
               height="100%"
               style="border: 0"
@@ -160,6 +173,22 @@ function closeInquiry() {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.contacts-block__city {
+  margin: -8px 0 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.contacts-block__city-btn {
+  padding: 0;
+  font: inherit;
+  color: var(--gold);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 .contacts-block__title {

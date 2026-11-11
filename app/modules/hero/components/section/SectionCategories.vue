@@ -14,8 +14,8 @@ const categoryStore = useCategoryStore()
         <p class="categories__sub">Оберіть категорію для перегляду асортименту</p>
       </div>
 
-      <div v-if="categoryStore.loading" class="categories__loading">
-        Завантаження...
+      <div v-if="categoryStore.loading" class="categories__grid">
+        <BSkeleton v-for="n in 6" :key="n" aspect="3 / 2" />
       </div>
 
       <div v-else-if="categoryStore.categories.length > 0" class="categories__grid">
@@ -30,6 +30,8 @@ const categoryStore = useCategoryStore()
               :src="cat.imageUrl"
               :alt="cat.name"
               class="categories__card-img"
+              loading="lazy"
+              decoding="async"
           >
           <div v-else class="categories__card-img categories__card-img--placeholder" />
           <div class="categories__card-overlay" />

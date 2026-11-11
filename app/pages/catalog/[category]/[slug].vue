@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { useProductApi } from '~/modules/product/ProductApi'
 import { ROUTES } from '~/modules/common/constants/routes'
+import { useContacts } from '~/modules/common/composables/useContacts'
 import ProductGallery from '~/modules/product/components/ProductGallery.vue'
 import ProductTabs from '~/modules/product/components/ProductTabs.vue'
 import ProductAdvantages from '~/modules/product/components/ProductAdvantages.vue'
 import ProductBottomCta from '~/modules/product/components/ProductBottomCta.vue'
+import ProductRelated from '~/modules/product/components/ProductRelated.vue'
 import ProductStickyBar from '~/modules/product/components/ProductStickyBar.vue'
 
 
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
+const siteContacts = useContacts()
 const productApi = useProductApi()
 
 const showStickyBtn = ref(false)
@@ -25,20 +28,35 @@ const { data: product } = await useAsyncData(`product-${slug.value}`, () =>
 
 const siteUrl = useRuntimeConfig().public.siteUrl
 
+// У базі seoTitle зустрічається у вигляді "Назва -- ART MONOLIT"
+const seoTitle = computed(() => {
+  if (!product.value) return 'Товар не знайдено — ART MONOLIT'
+  if (product.value.seoTitle) return product.value.seoTitle.replace(/\s*--\s*/g, ' — ')
+  return `${product.value.title} — ART MONOLIT`
+})
+
+const seoDescription = computed(() => {
+  if (!product.value) return ''
+  if (product.value.seoDescription) return product.value.seoDescription
+  if (product.value.description) return product.value.description
+  const category = product.value.category?.name
+  return `${product.value.title}${category ? `. Категорія: ${category}` : ''}. Виробник пам'ятників ART MONOLIT, Запоріжжя. Залиште заявку — розрахуємо вартість.`
+})
+
 useSeoMeta({
-  title: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
-  description: () => product.value?.seoDescription || product.value?.description || '',
+  title: () => seoTitle.value,
+  description: () => seoDescription.value,
   ogType: 'product',
-  ogTitle: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
-  ogDescription: () => product.value?.seoDescription || product.value?.description || '',
-  ogImage: () => product.value?.images?.[0] || `${siteUrl}/og-image.jpg`,
-  ogUrl: () => `${siteUrl}/catalog/${slug.value}`,
+  ogTitle: () => seoTitle.value,
+  ogDescription: () => seoDescription.value,
+  ogImage: () => product.value?.images?.[0]?.url || `${siteUrl}/og-image.jpg`,
+  ogUrl: () => `${siteUrl}${route.path}`,
   ogLocale: 'uk_UA',
   ogSiteName: 'Арт Моноліт',
   twitterCard: 'summary_large_image',
-  twitterTitle: () => product.value?.seoTitle || `${product.value?.title} — Арт Моноліт`,
-  twitterDescription: () => product.value?.seoDescription || product.value?.description || '',
-  twitterImage: () => product.value?.images?.[0] || `${siteUrl}/og-image.jpg`,
+  twitterTitle: () => seoTitle.value,
+  twitterDescription: () => seoDescription.value,
+  twitterImage: () => product.value?.images?.[0]?.url || `${siteUrl}/og-image.jpg`,
 })
 
 const quickFacts = [
@@ -46,6 +64,22 @@ const quickFacts = [
   { icon: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25m-2.25 0h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12', text: 'Безкоштовна доставка' },
   { icon: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z', text: 'Від 25 днів' },
 ]
+
+const toast = useToast()
+
+async function shareProduct() {
+  const url = window.location.href
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: product.value?.title, url })
+    } catch {
+      // користувач закрив діалог
+    }
+    return
+  }
+  await navigator.clipboard.writeText(url)
+  toast.success('Посилання скопійовано')
+}
 
 function openInquiry() {
   inquiryOpen.value = true
@@ -125,9 +159,36 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <BButton variant="primary" size="lg" class="product-page__cta" @click="openInquiry">
-            Дізнатися ціну
-          </BButton>
+          <div class="product-page__actions">
+            <BButton variant="primary" size="lg" class="product-page__cta" @click="openInquiry">
+              Дізнатися ціну
+            </BButton>
+            <BButton variant="outline" size="lg" aria-label="Поділитися" @click="shareProduct">
+              <BIcon name="share" size="sm" />
+              Поділитися
+            </BButton>
+          </div>
+
+          <div class="product-page__contact">
+            <a :href="siteContacts.PHONE_1_HREF" class="product-page__call">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+              </svg>
+              {{ siteContacts.PHONE_1 }}
+            </a>
+            <a
+                v-for="social in siteContacts.SOCIALS"
+                :key="social.name"
+                :href="social.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="product-page__social"
+                :title="social.name"
+                :aria-label="social.name"
+            >
+              <svg viewBox="0 0 24 24" :fill="social.color" aria-hidden="true"><path :d="social.icon" /></svg>
+            </a>
+          </div>
 
           <ProductTabs :product="product" />
         </div>
@@ -137,6 +198,12 @@ onUnmounted(() => {
           id="advantages"
           data-animate
           :visible="visibleSections.has('advantages')"
+      />
+
+      <ProductRelated
+          v-if="product.category"
+          :category-id="product.category.id"
+          :current-id="product.id"
       />
 
       <ProductBottomCta
@@ -170,6 +237,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.product-page__actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .product-page {
   max-width: 1280px;
   margin: 0 auto;
@@ -270,8 +344,55 @@ onUnmounted(() => {
 }
 
 .product-page__cta {
-  width: 100%;
-  margin-top: 8px;
+  flex: 1 1 auto;
+}
+
+.product-page__contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.product-page__call {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.product-page__call svg {
+  width: 20px;
+  height: 20px;
+  color: var(--gold);
+}
+
+.product-page__call:hover {
+  color: var(--gold);
+}
+
+.product-page__social {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  transition: border-color 0.2s;
+}
+
+.product-page__social svg {
+  width: 20px;
+  height: 20px;
+}
+
+.product-page__social:hover {
+  border-color: var(--gold);
 }
 
 .product-page__not-found {

@@ -8,6 +8,12 @@ await heroStore.fetchAll()
 const currentIndex = ref<number>(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
+useHead({
+  link: () => heroStore.slides[0]?.imageUrl
+    ? [{ rel: 'preload', as: 'image', href: heroStore.slides[0].imageUrl, fetchpriority: 'high' }]
+    : [],
+})
+
 const currentSlide = computed(() => heroStore.slides[currentIndex.value])
 
 function next(): void {
@@ -51,9 +57,7 @@ watch(() => heroStore.slides, () => {
 
 <template>
   <section class="hero">
-    <div v-if="heroStore.loading && !heroStore.loaded" class="hero__loading">
-      Завантаження...
-    </div>
+    <BSkeleton v-if="heroStore.loading && !heroStore.loaded" height="100%" radius="0" />
 
     <template v-else-if="heroStore.slides.length > 0 && currentSlide">
       <div class="hero__slides">
@@ -68,6 +72,13 @@ watch(() => heroStore.slides, () => {
               :src="slide.imageUrl"
               :alt="slide.title"
               class="hero__bg"
+              :fetchpriority="index === 0 ? 'high' : 'auto'"
+              :loading="index === 0 ? 'eager' : 'lazy'"
+              :style="{
+                '--focus-desktop': slide.focusDesktop || undefined,
+                '--focus-tablet': slide.focusTablet || undefined,
+                '--focus-mobile': slide.focusMobile || undefined,
+              }"
           >
           <div v-else class="hero__bg hero__bg--placeholder" />
         </div>
@@ -129,7 +140,6 @@ watch(() => heroStore.slides, () => {
   overflow: hidden;
 }
 
-.hero__loading,
 .hero__empty {
   display: flex;
   align-items: center;
@@ -160,6 +170,7 @@ watch(() => heroStore.slides, () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: var(--focus-desktop, 50% 50%);
 }
 
 .hero__bg--placeholder {
@@ -266,7 +277,17 @@ watch(() => heroStore.slides, () => {
   transform: translateY(-10px);
 }
 
+@media (max-width: 1024px) {
+  .hero__bg {
+    object-position: var(--focus-tablet, var(--focus-desktop, 50% 50%));
+  }
+}
+
 @media (max-width: 768px) {
+  .hero__bg {
+    object-position: var(--focus-mobile, var(--focus-tablet, var(--focus-desktop, 50% 50%)));
+  }
+
   .hero {
     height: 70vh;
     min-height: 400px;

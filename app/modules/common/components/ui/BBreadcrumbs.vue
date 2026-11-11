@@ -4,9 +4,29 @@ interface BreadcrumbItem {
   to?: string
 }
 
-defineProps<{
+const props = defineProps<{
   items: BreadcrumbItem[]
 }>()
+
+const siteUrl = useRuntimeConfig().public.siteUrl
+
+const jsonLd = computed(() => JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Головна', item: `${siteUrl}/` },
+    ...props.items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 2,
+      name: item.label,
+      ...(item.to ? { item: `${siteUrl}${item.to}` } : {}),
+    })),
+  ],
+}))
+
+useHead({
+  script: [{ key: 'ld-breadcrumbs', type: 'application/ld+json', innerHTML: jsonLd }],
+})
 </script>
 
 <template>

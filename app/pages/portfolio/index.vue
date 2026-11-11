@@ -7,8 +7,8 @@ definePageMeta({
 })
 
 useSeoMeta({
-  title: 'Каталог — ART MONOLIT',
-  description: 'Каталог пам\'ятників з граніту та мармуру від виробника',
+  title: 'Портфоліо — ART MONOLIT',
+  description: 'Приклади виконаних робіт: пам\'ятники та комплекси від виробника ART MONOLIT, Запоріжжя',
 })
 
 const route = useRoute()
@@ -25,6 +25,10 @@ const initialWorkId = computed(() => {
   return typeof workId === 'string' ? workId : ''
 })
 
+const gridRef = ref<{ $el: HTMLElement } | null>(null)
+
+watch(filters, () => scrollToElement(gridRef.value?.$el ?? null))
+
 function resetFilters() {
   filters.search = ''
   filters.category = ''
@@ -35,13 +39,13 @@ function resetFilters() {
 
 <template>
   <div class="catalog-page">
-    <BBreadcrumbs :items="[{ label: 'Каталог' }]" />
+    <BBreadcrumbs :items="[{ label: 'Портфоліо' }]" />
 
     <div class="catalog-page__header">
       <h1 class="catalog-page__title">
-        <span class="catalog-page__accent">К</span>аталог
+        <span class="catalog-page__accent">П</span>ортфоліо
       </h1>
-      <p class="catalog-page__sub">Пам'ятники з граніту та мармуру від виробника</p>
+      <p class="catalog-page__sub">Приклади наших виконаних робіт</p>
     </div>
 
     <div class="catalog-page__body">
@@ -51,7 +55,7 @@ function resetFilters() {
           v-model:sort="filters.sort"
           @reset="resetFilters"
       />
-      <WorksGrid :filters="filters" :initial-work-id="initialWorkId" />
+      <WorksGrid ref="gridRef" :filters="filters" :initial-work-id="initialWorkId" />
     </div>
   </div>
 </template>

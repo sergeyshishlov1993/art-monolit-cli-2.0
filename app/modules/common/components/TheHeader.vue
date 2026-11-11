@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BIconLogo from '~/assets/icon/b-icon-logo.vue'
 import { ROUTES } from '~/modules/common/constants/routes'
-import { CONTACTS } from '~/modules/common/constants/contacts'
+import { useContacts } from '~/modules/common/composables/useContacts'
 
 interface NavChildItem {
   label: string
@@ -19,6 +19,7 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
+const siteContacts = useContacts()
 
 const isMobileOpen = ref(false)
 const openDropdown = ref<string | null>(null)
@@ -99,11 +100,13 @@ function toggleDropdown(label: string) {
         </template>
       </nav>
 
-      <a :href="CONTACTS.PHONE_1_HREF" class="header__phone">
+      <HeaderSearch />
+
+      <a :href="siteContacts.PHONE_1_HREF" class="header__phone">
         <svg class="header__phone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
         </svg>
-        {{ CONTACTS.PHONE_1 }}
+        {{ siteContacts.PHONE_1 }}
       </a>
 
       <div class="header__actions">
@@ -150,8 +153,8 @@ function toggleDropdown(label: string) {
           </template>
         </template>
 
-        <a :href="CONTACTS.PHONE_1_HREF" class="header__mobile-link header__mobile-phone" @click="isMobileOpen = false">
-          {{ CONTACTS.PHONE_1 }}
+        <a :href="siteContacts.PHONE_1_HREF" class="header__mobile-link header__mobile-phone" @click="isMobileOpen = false">
+          {{ siteContacts.PHONE_1 }}
         </a>
       </div>
     </Transition>
@@ -389,6 +392,21 @@ function toggleDropdown(label: string) {
   .header__actions-mobile { display: flex; margin-left: auto; }
   .header__burger { display: flex; }
   .header__mobile { display: flex; }
+
+  /* усі елементи мають вміщатися в екран телефона, бургер не повинен виходити за край */
+  .header__inner { padding: 0 16px; gap: 8px; }
+  .header__brand { flex-shrink: 1; min-width: 0; }
+  .header__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header__actions-mobile { gap: 4px; }
+}
+
+@media (max-width: 480px) {
+  .header__title { font-size: 14px; letter-spacing: 0.1em; }
+}
+
+@media (max-width: 400px) {
+  .header__inner { gap: 4px; }
+  .header__title { font-size: 13px; letter-spacing: 0.06em; }
 }
 
 .dropdown-enter-active,

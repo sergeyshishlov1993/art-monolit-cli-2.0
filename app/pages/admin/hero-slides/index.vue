@@ -37,6 +37,25 @@ async function handleDelete() {
   await fetchSlides()
 }
 
+const dragIndex = ref<number | null>(null)
+
+async function onDrop(targetIndex: number) {
+  const fromIndex = dragIndex.value
+  dragIndex.value = null
+  if (fromIndex === null || fromIndex === targetIndex) return
+
+  const reordered = [...slides.value]
+  const [moved] = reordered.splice(fromIndex, 1)
+  reordered.splice(targetIndex, 0, moved!)
+
+  await Promise.all(
+      reordered.map((slide, index) =>
+          slide.sortOrder === index ? null : heroApi.update(slide.id, { sortOrder: index }),
+      ),
+  )
+  slides.value = reordered.map((slide, index) => ({ ...slide, sortOrder: index }))
+}
+
 onMounted(fetchSlides)
 </script>
 
@@ -56,12 +75,19 @@ onMounted(fetchSlides)
       Слайди ще не додані
     </div>
 
-    <div v-else class="admin-slides">
+    <p v-else-if="slides.length > 1" class="admin-slides__hint">Перетягніть слайд, щоб змінити порядок</p>
+
+    <div v-if="!loading && slides.length" class="admin-slides">
       <div
-          v-for="slide in slides"
+          v-for="(slide, index) in slides"
           :key="slide.id"
           class="admin-slide"
-          :class="{ 'admin-slide--inactive': !slide.isActive }"
+          :class="{ 'admin-slide--inactive': !slide.isActive, 'admin-slide--dragging': dragIndex === index }"
+          draggable="true"
+          @dragstart="dragIndex = index"
+          @dragover.prevent
+          @drop.prevent="onDrop(index)"
+          @dragend="dragIndex = null"
       >
         <div class="admin-slide__image">
           <img
@@ -165,7 +191,18 @@ onMounted(fetchSlides)
   gap: 16px;
 }
 
+.admin-slides__hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.admin-slide--dragging {
+  opacity: 0.4;
+}
+
 .admin-slide {
+  cursor: grab;
   display: flex;
   gap: 20px;
   background: var(--bg-card);
